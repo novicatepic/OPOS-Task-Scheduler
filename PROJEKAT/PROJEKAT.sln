@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33122.133
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PROJEKAT", "PROJEKAT\PROJEKAT.csproj", "{8213258F-7426-43ED-AC71-EA5C60C52844}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PROJEKAT", "PROJEKAT\PROJEKAT.csproj", "{8213258F-7426-43ED-AC71-EA5C60C52844}"
+	ProjectSection(ProjectDependencies) = postProject
+		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538} = {5C2D628C-8E8E-44B2-8419-9B70B2AFF538}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskScheduler", "TaskScheduler\TaskScheduler.csproj", "{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +20,10 @@ Global
 		{8213258F-7426-43ED-AC71-EA5C60C52844}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8213258F-7426-43ED-AC71-EA5C60C52844}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8213258F-7426-43ED-AC71-EA5C60C52844}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
