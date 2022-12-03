@@ -8,6 +8,7 @@ namespace TaskScheduler
 {
     internal class JobContext : IJobContext
     {
+        //Concerning job, each job has it's own state
         private enum JobState
         {
             NotStarted, 
@@ -33,6 +34,7 @@ namespace TaskScheduler
         {
             thread = new(() =>
             {
+                //Calls Run method from and Finishes, but it's not started yet, only declaring what thread will do
                 try
                 {
                     userJob.Run(this);
@@ -49,6 +51,8 @@ namespace TaskScheduler
             this.onJobContinueRequested = onJobContinueRequested;
         }
 
+        //Start() is either going to start the job
+        //Or it's going to resume the job if it was paused before
         internal void Start()
         {
             lock(jobContextLock)
@@ -57,6 +61,7 @@ namespace TaskScheduler
                 {
                     case JobState.NotStarted:
                         jobState = JobState.Running;
+                        //When job starts, thread is started, and we know what thread does, it causes mayhem :)
                         thread.Start();
                         break;
                     case JobState.RunningWithPauseRequest:
@@ -76,6 +81,9 @@ namespace TaskScheduler
             }
         }
 
+        //Finish() is private method and it doesn't make sense for us to call it
+        //If there were threads waiting they are going to be set free
+        //And onJobFinished logic is going to be implemented
         private void Finish()
         {
             lock (jobContextLock)
@@ -102,6 +110,7 @@ namespace TaskScheduler
             }
         }
 
+        //Thread doesn't run anymore but it waits (semaphore) and increases numWaiters so they can be released
         internal void Wait()
         {
             lock (jobContextLock)
@@ -122,6 +131,8 @@ namespace TaskScheduler
             finishedSemaphore.Wait();
         }
 
+        //When we request pause, we don't go into pause mode straight away
+        //But rather we update the state which will later be checked by CheckPause() method
         internal void RequestPause()
         {
             lock (jobContextLock)
@@ -145,6 +156,9 @@ namespace TaskScheduler
             }
         }
 
+        //If job was paused
+        //It only makes sense to wait for resuming, and calls onJobContinueRequested
+        //Wouldn't make sense to go into running state because other jobs are being worked on
         internal void RequestContinue()
         {
             lock(jobContextLock)
@@ -170,6 +184,11 @@ namespace TaskScheduler
             }
         }
 
+
+
+        //Job is always going to check for a pause
+        //After it has finished part of the job, and if pause was requested
+        //Job goes into pause mode and waits (semaphore)
         public void CheckForPause()
         {
             bool shouldPause = false; 

@@ -2,6 +2,9 @@
 {
     public class Job
     {
+        //Public Class Job is going to use JobContext methods
+        //So user doesn't know what is really happening
+
         private readonly JobContext jobContext; 
 
         internal Job(JobContext jobContext)

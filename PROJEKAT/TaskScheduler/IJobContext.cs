@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler
 {
+    //IJobContenxt only has CheckForPause method, for now
     public interface IJobContext
     {
         public void CheckForPause();

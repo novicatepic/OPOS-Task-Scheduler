@@ -9,10 +9,13 @@ namespace PROJEKAT
 {
     public class DemoUserJob : IUserJob
     {
+        //Job has it's name, number of iterations, sleep time...
+        //And it implements Run method where we can implement our logic
         public string Name { get; init; } = "DemoUserJob";
         public int NumIterations = 100;
         public int SleepTime = 500;
 
+        //Important note: checking for pause at the end of each iteration
         public void Run(IJobContext jobApi)
         {
             Console.WriteLine(Name + " started.");

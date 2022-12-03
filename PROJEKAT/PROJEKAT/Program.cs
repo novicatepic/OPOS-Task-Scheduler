@@ -1,6 +1,5 @@
 ﻿using PROJEKAT;
 using TaskScheduler;
-using PROJEKAT;
 
 TaskScheduler.TaskScheduler taskScheduler = new()
 {
