@@ -24,9 +24,30 @@ namespace PROJEKAT
                 Console.WriteLine($"{Name}: {i}");
                 Thread.Sleep(SleepTime);
                 jobApi.CheckForPause();
+                jobApi.CheckForStoppage();
+                if(jobApi.StoppageConfirmed())
+                {
+                    break;
+                }
+                if(jobApi.CheckExecutionTime())
+                {
+                    Console.WriteLine(Name + " RIP");
+                    break;
+                }
+                if(jobApi.CheckFinishTime())
+                {                   
+                    break;
+                }
             }
 
-            Console.WriteLine($"{Name} finished.");
+            if(!jobApi.StoppageConfirmed())
+            {
+                Console.WriteLine($"{Name} finished.");
+            } else
+            {
+                Console.WriteLine($"{Name} stopped.");
+            }
+            
         }
     }
 }

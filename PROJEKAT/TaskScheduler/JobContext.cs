@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,29 +10,45 @@ namespace TaskScheduler
     internal class JobContext : IJobContext
     {
         //Concerning job, each job has it's own state
-        private enum JobState
+        //Changed to internal
+        public enum JobState
         {
-            NotStarted, 
-            Running, 
+            NotStarted,
+            Running,
             RunningWithPauseRequest,
             WaitingToResume,
             Paused,
-            Finished 
+            Stopped,
+            Finished
         }
 
+        internal DateTime StartTime { get; init; }
+        internal DateTime FinishTime { get; init; }
+        internal int MaxExecutionTime { get; init; }
         private JobState jobState = JobState.NotStarted;
         private readonly Thread thread;
         private readonly object jobContextLock = new();
         private readonly Action<JobContext> onJobFinished;
         private readonly Action<JobContext> onJobPaused;
         private readonly Action<JobContext> onJobContinueRequested;
+        private readonly Action<JobContext> onJobStopped;
         internal int Priority { get; init; }
-        private readonly SemaphoreSlim finishedSemaphore = new(0);
+        private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
-        private int numWaiters = 0;
-
-        public JobContext(IUserJob userJob, int priority, Action<JobContext> onJobFinished, Action<JobContext> onJobPaused, Action<JobContext> onJobContinueRequested)
+        private static int numWaiters = 0;                      //static necessary!
+        private IUserJob userJob;
+        private bool jobStopped = false;
+        private DateTime tempTime;      //in case if user decided to specify MaxExecution time, withouth start or finish time
+        public JobContext(IUserJob userJob, int priority,
+            DateTime startTime,
+            DateTime finishTime,
+            int maxExecutionTime,
+            Action<JobContext> onJobFinished,
+            Action<JobContext> onJobPaused,
+            Action<JobContext> onJobContinueRequested, 
+            Action<JobContext> onJobStopped)
         {
+            this.userJob = userJob;
             thread = new(() =>
             {
                 //Calls Run method from and Finishes, but it's not started yet, only declaring what thread will do
@@ -41,7 +58,10 @@ namespace TaskScheduler
                 }
                 finally
                 {
-                    Finish();
+                    if(!(jobState == JobState.Stopped))
+                    {
+                        Finish();
+                    }                    
                 }
             });
 
@@ -49,12 +69,21 @@ namespace TaskScheduler
             this.onJobFinished = onJobFinished;
             this.onJobPaused = onJobPaused;
             this.onJobContinueRequested = onJobContinueRequested;
+            this.onJobStopped = onJobStopped;
+            this.StartTime = startTime;
+            this.FinishTime = finishTime;
+            this.MaxExecutionTime = maxExecutionTime;
         }
 
         //Start() is either going to start the job
         //Or it's going to resume the job if it was paused before
         internal void Start()
         {
+            //2010, 1, 1 some default date time
+            if(StartTime == new DateTime(2010, 1, 1))
+            {
+                tempTime = DateTime.Now;
+            }
             lock(jobContextLock)
             {
                 switch(jobState)
@@ -103,6 +132,8 @@ namespace TaskScheduler
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Job already finished.");
+                    case JobState.Stopped:
+                        throw new InvalidOperationException("Job stopped.");
                     default:
                         throw new InvalidOperationException("Invalid job state");
 
@@ -121,6 +152,7 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                     case JobState.Running:
                         numWaiters++;
+                        finishedSemaphore.Wait();                      
                         break; 
                     case JobState.Finished:
                         return;
@@ -128,7 +160,7 @@ namespace TaskScheduler
                         throw new InvalidOperationException("Invalid job state");
                 }
             }
-            finishedSemaphore.Wait();
+            //finishedSemaphore.Wait();
         }
 
         //When we request pause, we don't go into pause mode straight away
@@ -176,6 +208,9 @@ namespace TaskScheduler
                         jobState = JobState.WaitingToResume;
                         onJobContinueRequested(this);
                         break;
+                    case JobState.WaitingToResume:
+                        jobState = JobState.WaitingToResume;
+                        break;
                     case JobState.Finished:
                         break;
                     default:
@@ -184,7 +219,31 @@ namespace TaskScheduler
             }
         }
 
-
+        internal void RequestStop()
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Job not started!");
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Job finished!");    //I can use break as well here
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                    case JobState.WaitingToResume:
+                    case JobState.Paused:
+                        jobState = JobState.Stopped;
+                        jobStopped = true;
+                        break; 
+                    case JobState.Stopped:
+                        break;
+                    default: 
+                        throw new InvalidOperationException("Invalid job state");
+                        
+                }
+            }
+        }
 
         //Job is always going to check for a pause
         //After it has finished part of the job, and if pause was requested
@@ -207,6 +266,8 @@ namespace TaskScheduler
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
                 }
@@ -218,5 +279,83 @@ namespace TaskScheduler
             }
         }
 
+        public void CheckForStoppage()
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotStarted:
+                        break;
+                    case JobState.RunningWithPauseRequest:
+                        break;
+                    case JobState.Running:
+                        break;
+                    case JobState.Finished:
+                        break;
+                    case JobState.Stopped:
+                        onJobStopped(this);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+        }
+
+        //PROBABLY THERE IS A BETTER IMPLEMENTATION, AND THAT IS TO CHECK TIME SOMEWHERE INTERNALLY, THIS IS NOT PRECISE ENOUGH
+        public bool CheckExecutionTime()
+        {
+            //If user didn't set max execution time, we don't really care
+            if(MaxExecutionTime == 0)
+            {
+                return false;
+            }
+            //If execution time is longer that specified, it's time to stop
+            TimeSpan ts = DateTime.Now - tempTime;
+            double differenceInMilliseconds = ts.TotalMilliseconds;
+            //Console.WriteLine("Tick tack: " + (ms1 - ms2));
+            //Console.WriteLine("Exec time: " + differenceInMilliseconds);
+            if(differenceInMilliseconds >= MaxExecutionTime) {
+                return true; 
+            }
+            //Else return false
+            return false;
+        }
+
+        public bool CheckFinishTime()
+        {
+            //Base case
+            if(FinishTime.Year == 2010)
+            {
+                return false;
+            }
+            //If it still has time to finish
+            if(DateTime.Now.Millisecond < FinishTime.Millisecond)
+            {
+                return false; 
+            }
+            //Else it was running for too long
+            return true;
+        }
+
+        public JobState GetJobState()
+        {
+            return jobState;
+        }
+
+        internal int GetPriority()
+        {
+            return Priority;
+        }
+
+        internal IUserJob GetUserJob()
+        {
+            return this.userJob;
+        }
+
+        public bool StoppageConfirmed()
+        {
+            return jobStopped;
+        }
     }
 }

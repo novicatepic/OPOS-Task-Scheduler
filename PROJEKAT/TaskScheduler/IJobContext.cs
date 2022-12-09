@@ -10,5 +10,10 @@ namespace TaskScheduler
     public interface IJobContext
     {
         public void CheckForPause();
+        public void CheckForStoppage();
+        public bool StoppageConfirmed();
+        public bool CheckExecutionTime();
+        public bool CheckFinishTime();
+
     }
 }

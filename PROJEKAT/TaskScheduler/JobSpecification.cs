@@ -12,6 +12,9 @@ namespace TaskScheduler
     {
         internal IUserJob UserJob { get; }
         public int Priority { get; init; } = 0;
+        public DateTime StartTime { get; set; } = new DateTime(2010, 01, 01);       //Time specifying when the job will be started
+        public int MaxExecutionTime{ get; set; } = 0;      //Max time for the exectuion of a job, max execution time
+        public DateTime FinishTime { get; set; } = new DateTime(2010, 01, 01);       //Time specifying when the job will be finished or stopped
 
         public JobSpecification(IUserJob userJob)
         {

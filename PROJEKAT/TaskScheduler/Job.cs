@@ -5,7 +5,7 @@
         //Public Class Job is going to use JobContext methods
         //So user doesn't know what is really happening
 
-        private readonly JobContext jobContext; 
+        private readonly JobContext jobContext;
 
         internal Job(JobContext jobContext)
         {
@@ -26,5 +26,11 @@
         {
             jobContext.RequestContinue();   
         }
+
+        public void RequestStop()
+        {
+            jobContext.RequestStop();
+        }
+
     }
 }
