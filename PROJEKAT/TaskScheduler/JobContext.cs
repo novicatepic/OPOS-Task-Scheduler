@@ -22,6 +22,10 @@ namespace TaskScheduler
             Finished
         }
 
+
+        private static int id;
+        private bool waited = false;
+
         internal DateTime StartTime { get; init; }
         internal DateTime FinishTime { get; init; }
         internal int MaxExecutionTime { get; init; }
@@ -45,9 +49,10 @@ namespace TaskScheduler
             int maxExecutionTime,
             Action<JobContext> onJobFinished,
             Action<JobContext> onJobPaused,
-            Action<JobContext> onJobContinueRequested, 
+            Action<JobContext> onJobContinueRequested,
             Action<JobContext> onJobStopped)
         {
+            id++;
             this.userJob = userJob;
             thread = new(() =>
             {
@@ -80,13 +85,13 @@ namespace TaskScheduler
         internal void Start()
         {
             //2010, 1, 1 some default date time
-            if(StartTime == new DateTime(2010, 1, 1))
+            if (StartTime == new DateTime(2010, 1, 1))
             {
                 tempTime = DateTime.Now;
             }
-            lock(jobContextLock)
+            lock (jobContextLock)
             {
-                switch(jobState)
+                switch (jobState)
                 {
                     case JobState.NotStarted:
                         jobState = JobState.Running;
@@ -94,7 +99,7 @@ namespace TaskScheduler
                         thread.Start();
                         break;
                     case JobState.RunningWithPauseRequest:
-                        break; 
+                        break;
                     case JobState.Running:
                         throw new InvalidOperationException("Job already started");
                     case JobState.Finished:
@@ -113,6 +118,7 @@ namespace TaskScheduler
         //Finish() is private method and it doesn't make sense for us to call it
         //If there were threads waiting they are going to be set free
         //And onJobFinished logic is going to be implemented
+        private static int waitReleaser = 0;
         private void Finish()
         {
             lock (jobContextLock)
@@ -123,17 +129,33 @@ namespace TaskScheduler
                         throw new InvalidOperationException("Job not started");
                     case JobState.RunningWithPauseRequest:
                     case JobState.Running:
+                    case JobState.Stopped:
                         jobState = JobState.Finished;
-                        if(numWaiters > 0)
+                        /*if (numWaiters > 0)
                         {
                             finishedSemaphore.Release(numWaiters);
+                        }*/
+                        if(allWait)
+                        {
+                            waitReleaser++;
+                            if(waitReleaser == TaskScheduler.CopyConcurrentTasks)
+                            {
+                                waitReleaser = 0;
+                                allWait = false; 
+                                //LOGIC TO RELEASE THE TASK
+                            }
                         }
-                        onJobFinished(this); 
+                        if(waited)
+                        {
+                            waited = false;
+                            //LOGIC TO RELEASE THE TASK
+                        }
+                        onJobFinished(this);
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Job already finished.");
-                    case JobState.Stopped:
-                        throw new InvalidOperationException("Job stopped.");
+                    /*case JobState.Stopped:
+                        throw new InvalidOperationException("Job stopped.");*/
                     default:
                         throw new InvalidOperationException("Invalid job state");
 
@@ -142,25 +164,55 @@ namespace TaskScheduler
         }
 
         //Thread doesn't run anymore but it waits (semaphore) and increases numWaiters so they can be released
-        internal void Wait()
+        /*internal void Wait()
         {
-            lock (jobContextLock)
+            if(!TaskScheduler.isOne)
             {
-                switch (jobState)
+                lock (jobContextLock)
                 {
-                    case JobState.NotStarted:
-                    case JobState.RunningWithPauseRequest:
-                    case JobState.Running:
-                        numWaiters++;
-                        finishedSemaphore.Wait();                      
-                        break; 
-                    case JobState.Finished:
-                        return;
-                    default:
-                        throw new InvalidOperationException("Invalid job state");
+                    switch (jobState)
+                    {
+                        case JobState.NotStarted:
+                        case JobState.RunningWithPauseRequest:
+                        case JobState.Running:
+                            numWaiters++;
+                            finishedSemaphore.Wait();
+                            break;
+                        case JobState.Finished:
+                            return;
+                        default:
+                            throw new InvalidOperationException("Invalid job state");
+                    }
                 }
             }
+            
             //finishedSemaphore.Wait();
+        }*/
+
+        private static bool allWait = false;
+        internal void WaitAll()
+        {
+            lock(jobContextLock)
+            {
+                allWait = true;
+                finishedSemaphore.Wait();
+            }
+        }
+
+        internal void Wait(JobContext job)
+        {
+            lock(jobContextLock)
+            {
+                if(job.jobState == JobState.Running || job.jobState == JobState.RunningWithPauseRequest)
+                {
+                    job.waited = true;
+                    finishedSemaphore.Wait();
+                }
+                else
+                {
+                    throw new InvalidOperationException("Can't wait for a job that is not running!");
+                }
+            }
         }
 
         //When we request pause, we don't go into pause mode straight away
@@ -193,7 +245,7 @@ namespace TaskScheduler
         //Wouldn't make sense to go into running state because other jobs are being worked on
         internal void RequestContinue()
         {
-            lock(jobContextLock)
+            lock (jobContextLock)
             {
                 switch (jobState)
                 {
@@ -201,11 +253,14 @@ namespace TaskScheduler
                         break;
                     case JobState.RunningWithPauseRequest:
                         jobState = JobState.Running;
-                        break; 
+                        break;
                     case JobState.Running:
                         break;
                     case JobState.Paused:
                         jobState = JobState.WaitingToResume;
+                        onJobContinueRequested(this);
+                        break;
+                    case JobState.Stopped:
                         onJobContinueRequested(this);
                         break;
                     case JobState.WaitingToResume:
@@ -235,12 +290,12 @@ namespace TaskScheduler
                     case JobState.Paused:
                         jobState = JobState.Stopped;
                         jobStopped = true;
-                        break; 
+                        break;
                     case JobState.Stopped:
                         break;
-                    default: 
+                    default:
                         throw new InvalidOperationException("Invalid job state");
-                        
+
                 }
             }
         }
@@ -250,8 +305,8 @@ namespace TaskScheduler
         //Job goes into pause mode and waits (semaphore)
         public void CheckForPause()
         {
-            bool shouldPause = false; 
-            lock(jobContextLock)
+            bool shouldPause = false;
+            lock (jobContextLock)
             {
                 switch (jobState)
                 {
@@ -273,7 +328,7 @@ namespace TaskScheduler
                 }
             }
 
-            if(shouldPause)
+            if (shouldPause)
             {
                 resumeSemaphore.Wait();
             }
@@ -294,6 +349,7 @@ namespace TaskScheduler
                     case JobState.Finished:
                         break;
                     case JobState.Stopped:
+                        //jobState = JobState.Finished;
                         onJobStopped(this);
                         break;
                     default:
@@ -306,7 +362,7 @@ namespace TaskScheduler
         public bool CheckExecutionTime()
         {
             //If user didn't set max execution time, we don't really care
-            if(MaxExecutionTime == 0)
+            if (MaxExecutionTime == 0)
             {
                 return false;
             }
@@ -315,8 +371,9 @@ namespace TaskScheduler
             double differenceInMilliseconds = ts.TotalMilliseconds;
             //Console.WriteLine("Tick tack: " + (ms1 - ms2));
             //Console.WriteLine("Exec time: " + differenceInMilliseconds);
-            if(differenceInMilliseconds >= MaxExecutionTime) {
-                return true; 
+            if (differenceInMilliseconds >= MaxExecutionTime)
+            {
+                return true;
             }
             //Else return false
             return false;
@@ -325,14 +382,14 @@ namespace TaskScheduler
         public bool CheckFinishTime()
         {
             //Base case
-            if(FinishTime.Year == 2010)
+            if (FinishTime.Year == 2010)
             {
                 return false;
             }
             //If it still has time to finish
-            if(DateTime.Now.Millisecond < FinishTime.Millisecond)
+            if (DateTime.Now.Millisecond < FinishTime.Millisecond)
             {
-                return false; 
+                return false;
             }
             //Else it was running for too long
             return true;

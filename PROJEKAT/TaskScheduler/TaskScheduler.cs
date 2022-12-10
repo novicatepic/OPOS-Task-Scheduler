@@ -11,11 +11,16 @@ namespace TaskScheduler
     {
         //TaskScheduler has MaxTasks, queue for jobs and current running jobs
         //Also lock is there
-        public int MaxConcurrentTasks { get; set; } = 2;
+        public int MaxConcurrentTasks { get; set; } = 1;
+        public static int CopyConcurrentTasks;
         //private readonly PriorityQueue<JobContext, int> jobQueue = new();
         private readonly AbstractQueue jobQueue;
         private readonly HashSet<JobContext> runningJobs = new();
+        private readonly HashSet<JobContext> waitedJobs = new();
+        private readonly HashSet<JobContext> waitingJobs = new();
+        private readonly Dictionary<JobContext, HashSet<JobContext>> mapWaiting = new();
         private readonly object schedulerLock = new();
+        public static bool isOne = false;
 
         public TaskScheduler(bool fifoflag) {
             if(fifoflag)
@@ -29,6 +34,12 @@ namespace TaskScheduler
 
         public Job Schedule(JobSpecification jobSpecification)
         {
+            CopyConcurrentTasks = MaxConcurrentTasks;
+            //Want to disable wait() callouts when there is one job running => better implementation
+            if(MaxConcurrentTasks == 1)
+            {
+                isOne = true;
+            }
             //When scheduling, context for a job will be created
             //UserJob is implemented by DemoUserJob
             JobContext jobContext = new(
@@ -132,6 +143,85 @@ namespace TaskScheduler
             }
         }
 
+        private void HandleJobWaiting(JobContext jobContext)
+        {
+            lock (schedulerLock)
+            {
+                runningJobs.Remove(jobContext);
+                //waitingJobs.Add(jobContext);
+                HashSet<JobContext> tempValues = new();
+                tempValues = runningJobs;
+                mapWaiting.Add(jobContext, tempValues);
+                if (jobQueue.Count() > 0)
+                {
+                    JobContext dequeuedJobContext = jobQueue.Dequeue();
+                    runningJobs.Add(dequeuedJobContext);
+                    dequeuedJobContext.Start();
+                }
+            }
+        }
+
+        //I'd implement this without a semaphore, but rather as a pause and continue
+        //Need to finish this implementation and test it for good
+        private void HandleJobRelease(JobContext jobContext)
+        {
+            lock (schedulerLock)
+            {
+                Dictionary<JobContext, HashSet<JobContext>>.ValueCollection values = mapWaiting.Values;
+                for (int i = 0; i < values.Count; i++)
+                {
+                    if (mapWaiting.ContainsValue(values.ElementAt(i)))
+                    {
+                        if(values.ElementAt(i).Contains(jobContext))
+                        {
+                            values.ElementAt(i).Remove(jobContext);
+                        }
+                        if(values.ElementAt(i).Count == 0)
+                        {
+                            JobContext key = null;
+                            foreach(var type in mapWaiting)
+                            {
+                                if(type.Value == values.ElementAt(i))
+                                {
+                                    key = type.Key;
+                                }
+                            }
+                            if(key != null)
+                            {
+                                HandleJobContinueRequested(key);
+                            }
+                        }
+                    }
+                }
+                runningJobs.Remove(jobContext);
+                waitingJobs.Add(jobContext);
+                for (int i = 0; i < runningJobs.Count; i++)
+                {
+                    //waitingJobs.Add();
+                }
+                if (jobQueue.Count() > 0)
+                {
+                    JobContext dequeuedJobContext = jobQueue.Dequeue();
+                    runningJobs.Add(dequeuedJobContext);
+                    dequeuedJobContext.Start();
+                }
+            }
+        }
+
+        private void HandleJobReleaseFromWaiting(JobContext jobContext)
+        {
+            lock (schedulerLock)
+            {
+                runningJobs.Remove(jobContext);
+                if (jobQueue.Count() > 0)
+                {
+                    JobContext dequeuedJobContext = jobQueue.Dequeue();
+                    runningJobs.Add(dequeuedJobContext);
+                    dequeuedJobContext.Start();
+                }
+            }
+        }
+
         //Same logic as HandleJobFinished
         //But not implemented in the same place
         //Don't want to duplicate code
@@ -155,7 +245,7 @@ namespace TaskScheduler
         {
             if(jobContext.GetJobState() == JobContext.JobState.Stopped)
             {
-                throw new InvalidOperationException("Can't started a stopped job!");
+                throw new InvalidOperationException("Can't continue a stopped job!");
             }
 
             lock(schedulerLock)
