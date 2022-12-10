@@ -193,32 +193,6 @@ namespace TaskScheduler
                         }
                     }
                 }
-                runningJobs.Remove(jobContext);
-                waitingJobs.Add(jobContext);
-                for (int i = 0; i < runningJobs.Count; i++)
-                {
-                    //waitingJobs.Add();
-                }
-                if (jobQueue.Count() > 0)
-                {
-                    JobContext dequeuedJobContext = jobQueue.Dequeue();
-                    runningJobs.Add(dequeuedJobContext);
-                    dequeuedJobContext.Start();
-                }
-            }
-        }
-
-        private void HandleJobReleaseFromWaiting(JobContext jobContext)
-        {
-            lock (schedulerLock)
-            {
-                runningJobs.Remove(jobContext);
-                if (jobQueue.Count() > 0)
-                {
-                    JobContext dequeuedJobContext = jobQueue.Dequeue();
-                    runningJobs.Add(dequeuedJobContext);
-                    dequeuedJobContext.Start();
-                }
             }
         }
 

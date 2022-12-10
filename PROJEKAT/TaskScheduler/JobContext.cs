@@ -18,6 +18,7 @@ namespace TaskScheduler
             RunningWithPauseRequest,
             WaitingToResume,
             Paused,
+            Blocked,    //waiting for other task(s) to finish their job => equivalent to wait(), notify() in java
             Stopped,
             Finished
         }
@@ -118,7 +119,7 @@ namespace TaskScheduler
         //Finish() is private method and it doesn't make sense for us to call it
         //If there were threads waiting they are going to be set free
         //And onJobFinished logic is going to be implemented
-        private static int waitReleaser = 0;
+        //private static int waitReleaser = 0;
         private void Finish()
         {
             lock (jobContextLock)
@@ -135,21 +136,12 @@ namespace TaskScheduler
                         {
                             finishedSemaphore.Release(numWaiters);
                         }*/
-                        if(allWait)
-                        {
-                            waitReleaser++;
-                            if(waitReleaser == TaskScheduler.CopyConcurrentTasks)
-                            {
-                                waitReleaser = 0;
-                                allWait = false; 
-                                //LOGIC TO RELEASE THE TASK
-                            }
-                        }
-                        if(waited)
-                        {
-                            waited = false;
+                        //onJobRelease(this)
+                        //if(waited)
+                        //{
+                            //waited = false;
                             //LOGIC TO RELEASE THE TASK
-                        }
+                        //}
                         onJobFinished(this);
                         break;
                     case JobState.Finished:
@@ -189,7 +181,7 @@ namespace TaskScheduler
             //finishedSemaphore.Wait();
         }*/
 
-        private static bool allWait = false;
+        private bool allWait = false;
         internal void WaitAll()
         {
             lock(jobContextLock)
@@ -314,8 +306,8 @@ namespace TaskScheduler
                         throw new InvalidOperationException("Invalid job state.");
                     case JobState.RunningWithPauseRequest:
                         jobState = JobState.Paused;
-                        onJobPaused(this);
                         shouldPause = true;
+                        onJobPaused(this);                  
                         break;
                     case JobState.Running:
                         break;
