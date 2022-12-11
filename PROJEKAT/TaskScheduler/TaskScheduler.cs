@@ -45,16 +45,17 @@ namespace TaskScheduler
                 priority: jobSpecification.Priority,                //priority = jobs priority
                 startTime: jobSpecification.StartTime,
                 finishTime: jobSpecification.FinishTime,
-                maxExecutionTime: jobSpecification.MaxExecutionTime,                                 
+                maxExecutionTime: jobSpecification.MaxExecutionTime,
                 onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
                 onJobStopped: HandleJobStopped,
-                onJobStarted: HandleJobStartTime);
+                onJobStarted: HandleJobStartTime,
+                onJobWait: HandleJobWaiting);
 
             //Either start the job if it can be started
             //Or put in in waiting queue
-            if(jobSpecification.StartTime < DateTime.Now)
+            if (jobSpecification.StartTime < DateTime.Now)
             {
                 ScheduleJob(jobContext);
             } else
@@ -75,7 +76,7 @@ namespace TaskScheduler
         {
             JobContext jobContext = new(
                 userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                    //priority = jobs priority
+                priority: jobSpecification.Priority,                //priority = jobs priority
                 startTime: jobSpecification.StartTime,
                 finishTime: jobSpecification.FinishTime,
                 maxExecutionTime: jobSpecification.MaxExecutionTime,
@@ -83,7 +84,8 @@ namespace TaskScheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
                 onJobStopped: HandleJobStopped,
-                onJobStarted: HandleJobStartTime);
+                onJobStarted: HandleJobStartTime,
+                onJobWait: HandleJobWaiting);
 
             Job job = new Job(jobContext);
             jobsWihoutStart.Add(job);
@@ -123,14 +125,16 @@ namespace TaskScheduler
         {
             JobContext jobContext = new(
                 userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                    //priority = jobs priority
+                priority: jobSpecification.Priority,                //priority = jobs priority
                 startTime: jobSpecification.StartTime,
                 finishTime: jobSpecification.FinishTime,
                 maxExecutionTime: jobSpecification.MaxExecutionTime,
                 onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped, onJobStarted: HandleJobStartTime);
+                onJobStopped: HandleJobStopped,
+                onJobStarted: HandleJobStartTime,
+                onJobWait: HandleJobWaiting);
 
             jobContext.Start();
 
@@ -146,6 +150,10 @@ namespace TaskScheduler
                 runningJobs.Remove(jobContext);
                 if(jobQueue.Count() > 0)
                 {
+                    if (jobContext.Priority == 1)
+                    {
+                        Console.WriteLine("YAS!");
+                    }
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
@@ -153,12 +161,12 @@ namespace TaskScheduler
             }
         }
 
-        private void HandleJobWaitingAll(JobContext jobContext)
+        /*private void HandleJobWaitingAll(JobContext jobContext)
         {
             lock (schedulerLock)
             {
                 runningJobs.Remove(jobContext);
-                if (mapWaiting.ContainsKey(jobContext))
+                /*if (mapWaiting.ContainsKey(jobContext))
                 {
                     HashSet<JobContext> tempValues = new();
                     mapWaiting.TryGetValue(jobContext, out tempValues);
@@ -181,6 +189,9 @@ namespace TaskScheduler
                 //HashSet<JobContext> tempValues = new();
                 //tempValues = runningJobs;
                 //mapWaiting.Add(jobContext, tempValues);
+
+
+
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
@@ -188,14 +199,14 @@ namespace TaskScheduler
                     dequeuedJobContext.Start();
                 }
             }
-        }
+        }*/
 
         private void HandleJobWaiting(JobContext jobContextWaiting, JobContext jobContextWaited)
         {
             lock (schedulerLock)
             {
                 runningJobs.Remove(jobContextWaiting);
-                if(mapWaiting.ContainsKey(jobContextWaiting))
+                /*if(mapWaiting.ContainsKey(jobContextWaiting))
                 {
                     HashSet<JobContext> tempValues = new();
                     mapWaiting.TryGetValue(jobContextWaiting, out tempValues);
@@ -209,7 +220,7 @@ namespace TaskScheduler
                     HashSet<JobContext> tempValues = new();
                     tempValues.Add(jobContextWaited);
                     mapWaiting.Add(jobContextWaiting, tempValues);
-                }
+                }*/
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
@@ -221,7 +232,7 @@ namespace TaskScheduler
 
         //I'd implement this without a semaphore, but rather as a pause and continue
         //Need to finish this implementation and test it for good
-        private void HandleJobRelease(JobContext jobContext)
+        /*private void HandleJobRelease(JobContext jobContext)
         {
             lock (schedulerLock)
             {
@@ -259,7 +270,7 @@ namespace TaskScheduler
                     }
                 }
             }
-        }
+        }*/
 
         //Same logic as HandleJobFinished
         //But not implemented in the same place

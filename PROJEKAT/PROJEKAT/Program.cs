@@ -1,9 +1,9 @@
 ﻿using PROJEKAT;
 using TaskScheduler;
 
-TaskScheduler.TaskScheduler taskScheduler = new(true)
+TaskScheduler.TaskScheduler taskScheduler = new(fifoflag: true)
 {
-    MaxConcurrentTasks = 1
+    MaxConcurrentTasks = 2
 };
 
 Job jobA = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
@@ -22,7 +22,7 @@ Job jobB = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
 })
 { Priority = 5 });
 
-Job jobc = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
+Job jobC = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
 {
     Name = "Job C",
     NumIterations = 5,
@@ -40,7 +40,27 @@ Job jobX = taskScheduler.ScheduleWithStart(new JobSpecification(new DemoUserJob(
 })
 { Priority = 1} );
 
-Thread.Sleep(4000);
+Thread.Sleep(1000);
+jobA.Wait(jobB);
+//jobB.Wait(jobC);
+
+/*Job jobB1 = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job B1",
+    NumIterations = 5,
+    SleepTime = 500
+})
+{ Priority = 5 });
+
+Job jobC1 = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job C1",
+    NumIterations = 5,
+    SleepTime = 500
+}));
+Thread.Sleep(6500);
+jobB1.Wait(jobC1);*/
+
 Console.WriteLine("Requesting pause on jobX");
 //jobX.RequestPause();
 

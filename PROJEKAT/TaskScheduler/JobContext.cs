@@ -18,13 +18,12 @@ namespace TaskScheduler
             RunningWithPauseRequest,
             WaitingToResume,
             Paused,
-            Blocked,    //waiting for other task(s) to finish their job => equivalent to wait(), notify() in java
             Stopped,
             Finished
         }
 
 
-        private static int id;
+        private int numWaited = 0;
         private bool waited = false;
 
         internal DateTime StartTime { get; init; }
@@ -38,13 +37,15 @@ namespace TaskScheduler
         private readonly Action<JobContext> onJobContinueRequested;
         private readonly Action<JobContext> onJobStopped;
         private readonly Action<JobContext> onJobStarted;
+        private readonly Action<JobContext, JobContext> onJobWait;
         internal int Priority { get; init; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
+        private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
         private static int numWaiters = 0;                      //static necessary!
         private IUserJob userJob;
         private bool jobStopped = false;
-        private DateTime tempTime;      //in case if user decided to specify MaxExecution time, withouth start or finish time
+        private DateTime tempTime;      //in case if user decided to specify MaxExecution time
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
             DateTime finishTime,
@@ -53,9 +54,9 @@ namespace TaskScheduler
             Action<JobContext> onJobPaused,
             Action<JobContext> onJobContinueRequested,
             Action<JobContext> onJobStopped,
-            Action<JobContext> onJobStarted)
+            Action<JobContext> onJobStarted,
+            Action<JobContext, JobContext> onJobWait)
         {
-            id++;
             this.userJob = userJob;
             thread = new(() =>
             {
@@ -66,10 +67,10 @@ namespace TaskScheduler
                 }
                 finally
                 {
-                    if(!(jobState == JobState.Stopped))
+                    if (!(jobState == JobState.Stopped))
                     {
                         Finish();
-                    }                    
+                    }
                 }
             });
 
@@ -79,9 +80,10 @@ namespace TaskScheduler
             this.onJobContinueRequested = onJobContinueRequested;
             this.onJobStopped = onJobStopped;
             this.onJobStarted = onJobStarted;
-            this.StartTime = startTime;
-            this.FinishTime = finishTime;
-            this.MaxExecutionTime = maxExecutionTime;
+            this.onJobWait = onJobWait;
+            StartTime = startTime;
+            FinishTime = finishTime;
+            MaxExecutionTime = maxExecutionTime;
         }
 
         //Start() is either going to start the job
@@ -113,6 +115,10 @@ namespace TaskScheduler
                         jobState = JobState.Running;
                         resumeSemaphore.Release();
                         break;
+                    case JobState.Stopped:
+                        jobState = JobState.Running;
+                        finishedSemaphore.Release();
+                        break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
 
@@ -135,17 +141,16 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                     case JobState.Running:
                     case JobState.Stopped:
-                        jobState = JobState.Finished;
-                        /*if (numWaiters > 0)
+                        if (numWaiters > 0)
                         {
                             finishedSemaphore.Release(numWaiters);
-                        }*/
-                        //onJobRelease(this)
-                        //if(waited)
-                        //{
-                            //waited = false;
-                            //LOGIC TO RELEASE THE TASK
-                        //}
+                        }
+
+                        if (waited)
+                        {
+                            waited = false;
+                            waitOnOtherJobSemaphore.Release(numWaited);
+                        }
                         onJobFinished(this);
                         break;
                     case JobState.Finished:
@@ -160,9 +165,9 @@ namespace TaskScheduler
         }
 
         //Thread doesn't run anymore but it waits (semaphore) and increases numWaiters so they can be released
-        /*internal void Wait()
+        internal void Wait()
         {
-            if(!TaskScheduler.isOne)
+            if (!TaskScheduler.isOne)
             {
                 lock (jobContextLock)
                 {
@@ -180,33 +185,58 @@ namespace TaskScheduler
                             throw new InvalidOperationException("Invalid job state");
                     }
                 }
-            }
-            
-            //finishedSemaphore.Wait();
-        }*/
-
-        internal void WaitAll()
-        {
-            lock(jobContextLock)
-            {
-                finishedSemaphore.Wait();
+                //finishedSemaphore.Wait();
             }
         }
 
         internal void Wait(JobContext job)
         {
-            lock(jobContextLock)
+            lock (jobContextLock)
             {
-                if(job.jobState == JobState.Running || job.jobState == JobState.RunningWithPauseRequest)
+                /*if(jobState == JobState.Running || jobState == JobState.RunningWithPauseRequest) 
                 {
-                    job.waited = true;
-                    finishedSemaphore.Wait();
+                    if (job.jobState == JobState.Running || job.jobState == JobState.RunningWithPauseRequest)
+                    {
+                        job.waited = true;
+                        //jobState = JobState.Blocked;
+                        onJobWait(this, job);
+                        job.numWaited++;
+                        waitOnOtherJobSemaphore.Wait();
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Can't wait for a job that is not running!");
+                    }
                 }
                 else
                 {
-                    throw new InvalidOperationException("Can't wait for a job that is not running!");
+                    throw new InvalidOperationException("Can't call wait on job that is not active!");
+                }*/
+                if (job.jobState == JobState.Running || job.jobState == JobState.RunningWithPauseRequest)
+                {
+                    switch (jobState)
+                    {
+                        case JobState.NotStarted:
+                        case JobState.RunningWithPauseRequest:
+                        case JobState.Running:
+                            job.waited = true;
+                            onJobWait(this, job);
+                            job.numWaited++;
+                            waitOnOtherJobSemaphore.Wait();
+                            break;
+                        case JobState.Finished:
+                            return;
+                        default:
+                            throw new InvalidOperationException("Invalid job state");
+                    }
+                } else
+                {
+                    throw new InvalidOperationException("Can't call wait on job that is not active!");
                 }
+                
+
             }
+
         }
 
         //When we request pause, we don't go into pause mode straight away
@@ -309,7 +339,7 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                         jobState = JobState.Paused;
                         shouldPause = true;
-                        onJobPaused(this);                  
+                        onJobPaused(this);
                         break;
                     case JobState.Running:
                         break;
@@ -391,14 +421,14 @@ namespace TaskScheduler
         public void CheckStartTime()
         {
             //If it stayed default or user specified a date in the past
-            if(StartTime.Year == 2010 || StartTime < DateTime.Now)
+            if (StartTime.Year == 2010 || StartTime < DateTime.Now)
             {
                 return;
             }
             Thread helpThread;
             helpThread = new(() =>
             {
-                while(StartTime > DateTime.Now) { }
+                while (StartTime > DateTime.Now) { }
                 onJobStarted(this);
             });
             helpThread.Start();

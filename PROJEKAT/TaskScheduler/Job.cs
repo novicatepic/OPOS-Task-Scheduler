@@ -12,13 +12,16 @@
             this.jobContext = jobContext;
         }
 
-        public void WaitAll()
+        //Wait on other jobs to finish without letting another job get time to execute on the processor
+        public void Wait()
         {
-            jobContext.WaitAll();
+            jobContext.Wait();
         }
 
+        //Wait on another job to execute and leave thread, after that go to the waiting queue
         public void Wait(Job job)
         {
+            //jobContext.Wait();
             jobContext.Wait(job.jobContext);
         }
 
