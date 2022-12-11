@@ -15,5 +15,14 @@ namespace TaskScheduler
         public bool CheckExecutionTime();
         public bool CheckFinishTime();
 
+        public bool CheckConditions()
+        {
+            if(CheckExecutionTime() || CheckFinishTime())
+            {
+                return true;
+            }
+            return false;
+        }
+
     }
 }

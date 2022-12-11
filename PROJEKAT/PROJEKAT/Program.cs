@@ -1,7 +1,7 @@
 ﻿using PROJEKAT;
 using TaskScheduler;
 
-TaskScheduler.TaskScheduler taskScheduler = new(false)
+TaskScheduler.TaskScheduler taskScheduler = new(true)
 {
     MaxConcurrentTasks = 1
 };
@@ -12,7 +12,7 @@ Job jobA = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
     NumIterations = 5,
     SleepTime = 500
 })
-{ Priority = 4 });
+{ Priority = 1, StartTime = new DateTime(2022, 12, 11, 6, 57, 52)});
 
 Job jobB = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
 {
@@ -32,7 +32,7 @@ Job jobc = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
 
 { Priority = 7 });
 
-Job jobX = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
+Job jobX = taskScheduler.ScheduleWithStart(new JobSpecification(new DemoUserJob()
 {
     Name = "Job X",
     NumIterations = 10,
@@ -42,13 +42,15 @@ Job jobX = taskScheduler.Schedule(new JobSpecification(new DemoUserJob()
 
 Thread.Sleep(4000);
 Console.WriteLine("Requesting pause on jobX");
-jobX.RequestPause();
+//jobX.RequestPause();
 
 Thread.Sleep(1000);
 Console.WriteLine("Requesting stoppage on jobX");
 Thread.Sleep(500);
-jobX.RequestStop();
+//jobX.RequestStop();
 Thread.Sleep(500);
 Console.WriteLine("Requesting wait on jobB");
-jobB.Wait();
-jobX.RequestContinue();
+Thread.Sleep(10000);
+//taskScheduler.ScheduleUnstartedJob(jobX);
+//jobB.Wait();
+//jobX.RequestContinue();

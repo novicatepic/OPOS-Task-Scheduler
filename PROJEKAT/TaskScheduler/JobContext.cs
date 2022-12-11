@@ -37,6 +37,7 @@ namespace TaskScheduler
         private readonly Action<JobContext> onJobPaused;
         private readonly Action<JobContext> onJobContinueRequested;
         private readonly Action<JobContext> onJobStopped;
+        private readonly Action<JobContext> onJobStarted;
         internal int Priority { get; init; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
@@ -51,7 +52,8 @@ namespace TaskScheduler
             Action<JobContext> onJobFinished,
             Action<JobContext> onJobPaused,
             Action<JobContext> onJobContinueRequested,
-            Action<JobContext> onJobStopped)
+            Action<JobContext> onJobStopped,
+            Action<JobContext> onJobStarted)
         {
             id++;
             this.userJob = userJob;
@@ -76,6 +78,7 @@ namespace TaskScheduler
             this.onJobPaused = onJobPaused;
             this.onJobContinueRequested = onJobContinueRequested;
             this.onJobStopped = onJobStopped;
+            this.onJobStarted = onJobStarted;
             this.StartTime = startTime;
             this.FinishTime = finishTime;
             this.MaxExecutionTime = maxExecutionTime;
@@ -95,6 +98,7 @@ namespace TaskScheduler
                 switch (jobState)
                 {
                     case JobState.NotStarted:
+                        CheckStartTime();
                         jobState = JobState.Running;
                         //When job starts, thread is started, and we know what thread does, it causes mayhem :)
                         thread.Start();
@@ -181,12 +185,10 @@ namespace TaskScheduler
             //finishedSemaphore.Wait();
         }*/
 
-        private bool allWait = false;
         internal void WaitAll()
         {
             lock(jobContextLock)
             {
-                allWait = true;
                 finishedSemaphore.Wait();
             }
         }
@@ -361,8 +363,7 @@ namespace TaskScheduler
             //If execution time is longer that specified, it's time to stop
             TimeSpan ts = DateTime.Now - tempTime;
             double differenceInMilliseconds = ts.TotalMilliseconds;
-            //Console.WriteLine("Tick tack: " + (ms1 - ms2));
-            //Console.WriteLine("Exec time: " + differenceInMilliseconds);
+            //If job worked longer than it should have work
             if (differenceInMilliseconds >= MaxExecutionTime)
             {
                 return true;
@@ -379,12 +380,28 @@ namespace TaskScheduler
                 return false;
             }
             //If it still has time to finish
-            if (DateTime.Now.Millisecond < FinishTime.Millisecond)
+            if (DateTime.Now < FinishTime)
             {
                 return false;
             }
             //Else it was running for too long
             return true;
+        }
+
+        public void CheckStartTime()
+        {
+            //If it stayed default or user specified a date in the past
+            if(StartTime.Year == 2010 || StartTime < DateTime.Now)
+            {
+                return;
+            }
+            Thread helpThread;
+            helpThread = new(() =>
+            {
+                while(StartTime > DateTime.Now) { }
+                onJobStarted(this);
+            });
+            helpThread.Start();
         }
 
         public JobState GetJobState()

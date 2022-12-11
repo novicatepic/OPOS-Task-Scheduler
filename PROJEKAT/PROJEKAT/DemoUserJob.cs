@@ -27,19 +27,14 @@ namespace PROJEKAT
                 
                 if(jobApi.StoppageConfirmed())
                 {
-                    Console.WriteLine("Stoppage confirmed");
                     break;
                 }
                 jobApi.CheckForStoppage();
-                /*if(jobApi.CheckExecutionTime())
+
+                if(jobApi.CheckConditions())
                 {
-                    Console.WriteLine(Name + " RIP");
                     break;
                 }
-                if(jobApi.CheckFinishTime())
-                {                   
-                    break;
-                }*/
             }
 
             if(!jobApi.StoppageConfirmed())

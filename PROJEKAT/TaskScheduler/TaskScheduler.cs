@@ -12,16 +12,15 @@ namespace TaskScheduler
         //TaskScheduler has MaxTasks, queue for jobs and current running jobs
         //Also lock is there
         public int MaxConcurrentTasks { get; set; } = 1;
-        public static int CopyConcurrentTasks;
-        //private readonly PriorityQueue<JobContext, int> jobQueue = new();
         private readonly AbstractQueue jobQueue;
         private readonly HashSet<JobContext> runningJobs = new();
-        private readonly HashSet<JobContext> waitedJobs = new();
-        private readonly HashSet<JobContext> waitingJobs = new();
         private readonly Dictionary<JobContext, HashSet<JobContext>> mapWaiting = new();
+        private readonly HashSet<Job> jobsWihoutStart = new();
         private readonly object schedulerLock = new();
         public static bool isOne = false;
 
+        //If set to true, it's goin to be FIFO
+        //Otherwise it's goint to be priority
         public TaskScheduler(bool fifoflag) {
             if(fifoflag)
             {
@@ -34,7 +33,6 @@ namespace TaskScheduler
 
         public Job Schedule(JobSpecification jobSpecification)
         {
-            CopyConcurrentTasks = MaxConcurrentTasks;
             //Want to disable wait() callouts when there is one job running => better implementation
             if(MaxConcurrentTasks == 1)
             {
@@ -51,28 +49,29 @@ namespace TaskScheduler
                 onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped);
+                onJobStopped: HandleJobStopped,
+                onJobStarted: HandleJobStartTime);
 
             //Either start the job if it can be started
             //Or put in in waiting queue
-            ScheduleJob(jobSpecification, jobContext);
+            if(jobSpecification.StartTime < DateTime.Now)
+            {
+                ScheduleJob(jobContext);
+            } else
+            {
+                jobContext.CheckStartTime();
+            }
+            
 
             return new Job(jobContext);
         }
 
-        public Job ScheduleWithStart(bool flag, JobSpecification jobSpecification)
+        public Job ScheduleWithStart(JobSpecification jobSpecification)
         {
-            if(flag)
-            {
-                return Schedule(jobSpecification);
-            } else
-            {
-                return ScheduleWithoutStart(jobSpecification);
-            }
-            
+            return Schedule(jobSpecification); 
         }
 
-        private Job ScheduleWithoutStart(JobSpecification jobSpecification)
+        public Job ScheduleWithoutStart(JobSpecification jobSpecification)
         {
             JobContext jobContext = new(
                 userJob: jobSpecification.UserJob,
@@ -83,17 +82,26 @@ namespace TaskScheduler
                 onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped);
+                onJobStopped: HandleJobStopped,
+                onJobStarted: HandleJobStartTime);
 
-            lock (schedulerLock)
-            {
-                jobQueue.Enqueue(jobContext, jobSpecification.Priority);
-            }
+            Job job = new Job(jobContext);
+            jobsWihoutStart.Add(job);
 
-            return new Job(jobContext);
+            return job;
         }
 
-        private void ScheduleJob(JobSpecification jobSpecification, JobContext jobContext)
+        public void ScheduleUnstartedJob(Job job)
+        {
+            if(jobsWihoutStart.Contains(job))
+            {
+                jobsWihoutStart.Remove(job);
+                ScheduleJob(job.GetJobContext());
+            }
+        }
+
+
+        private void ScheduleJob(JobContext jobContext)
         {
             lock (schedulerLock)
             {
@@ -104,7 +112,7 @@ namespace TaskScheduler
                 }
                 else
                 {
-                    jobQueue.Enqueue(jobContext, jobSpecification.Priority);
+                    jobQueue.Enqueue(jobContext, jobContext.Priority);
                     
                 }
             }
@@ -122,7 +130,9 @@ namespace TaskScheduler
                 onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
                 onJobPaused: HandleJobPaused,
                 onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped);
+                onJobStopped: HandleJobStopped, onJobStarted: HandleJobStartTime);
+
+            jobContext.Start();
 
             return new Job(jobContext);
         }
@@ -143,15 +153,63 @@ namespace TaskScheduler
             }
         }
 
-        private void HandleJobWaiting(JobContext jobContext)
+        private void HandleJobWaitingAll(JobContext jobContext)
         {
             lock (schedulerLock)
             {
                 runningJobs.Remove(jobContext);
-                //waitingJobs.Add(jobContext);
-                HashSet<JobContext> tempValues = new();
-                tempValues = runningJobs;
-                mapWaiting.Add(jobContext, tempValues);
+                if (mapWaiting.ContainsKey(jobContext))
+                {
+                    HashSet<JobContext> tempValues = new();
+                    mapWaiting.TryGetValue(jobContext, out tempValues);
+                    foreach(JobContext jb in runningJobs)
+                    {
+                        if(!tempValues.Contains(jb))
+                        {
+                            tempValues.Add(jb);
+                        }
+                    }
+                    mapWaiting.Add(jobContext, tempValues);
+                }
+                else
+                {
+                    HashSet<JobContext> tempValues = new();
+                    tempValues = runningJobs;
+                    //tempValues.Add(jobContextWaited);
+                    mapWaiting.Add(jobContext, tempValues);
+                }
+                //HashSet<JobContext> tempValues = new();
+                //tempValues = runningJobs;
+                //mapWaiting.Add(jobContext, tempValues);
+                if (jobQueue.Count() > 0)
+                {
+                    JobContext dequeuedJobContext = jobQueue.Dequeue();
+                    runningJobs.Add(dequeuedJobContext);
+                    dequeuedJobContext.Start();
+                }
+            }
+        }
+
+        private void HandleJobWaiting(JobContext jobContextWaiting, JobContext jobContextWaited)
+        {
+            lock (schedulerLock)
+            {
+                runningJobs.Remove(jobContextWaiting);
+                if(mapWaiting.ContainsKey(jobContextWaiting))
+                {
+                    HashSet<JobContext> tempValues = new();
+                    mapWaiting.TryGetValue(jobContextWaiting, out tempValues);
+                    if(!tempValues.Contains(jobContextWaited))
+                    {
+                        tempValues.Add(jobContextWaited);
+                    }
+                    mapWaiting.Add(jobContextWaiting, tempValues);
+                } else
+                {
+                    HashSet<JobContext> tempValues = new();
+                    tempValues.Add(jobContextWaited);
+                    mapWaiting.Add(jobContextWaiting, tempValues);
+                }
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
@@ -168,14 +226,19 @@ namespace TaskScheduler
             lock (schedulerLock)
             {
                 Dictionary<JobContext, HashSet<JobContext>>.ValueCollection values = mapWaiting.Values;
+                //Check for all values (sets)
                 for (int i = 0; i < values.Count; i++)
                 {
+                    //If map contains a set (which should always be true)
                     if (mapWaiting.ContainsValue(values.ElementAt(i)))
                     {
+                        //If set contains a job that finished it's work (someone was waiting on that job)
+                        //Remove it from the list
                         if(values.ElementAt(i).Contains(jobContext))
                         {
                             values.ElementAt(i).Remove(jobContext);
                         }
+                        //After we removed that job, it's time to release job that was waiting
                         if(values.ElementAt(i).Count == 0)
                         {
                             JobContext key = null;
@@ -183,11 +246,13 @@ namespace TaskScheduler
                             {
                                 if(type.Value == values.ElementAt(i))
                                 {
+                                    //Get a key (jobContext) for a specific set
                                     key = type.Key;
                                 }
                             }
                             if(key != null)
                             {
+                                //Handle it as a continue request
                                 HandleJobContinueRequested(key);
                             }
                         }
@@ -247,6 +312,14 @@ namespace TaskScheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
+            }
+        }
+
+        private void HandleJobStartTime(JobContext jobContext)
+        {
+            lock (schedulerLock)
+            {
+                ScheduleJob(jobContext);
             }
         }
 

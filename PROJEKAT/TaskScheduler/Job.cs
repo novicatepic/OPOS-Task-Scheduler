@@ -12,9 +12,14 @@
             this.jobContext = jobContext;
         }
 
-        public void Wait()
+        public void WaitAll()
         {
-            jobContext.Wait();
+            jobContext.WaitAll();
+        }
+
+        public void Wait(Job job)
+        {
+            jobContext.Wait(job.jobContext);
         }
 
         public void RequestPause()
@@ -30,6 +35,11 @@
         public void RequestStop()
         {
             jobContext.RequestStop();
+        }
+
+        internal JobContext GetJobContext()
+        {
+            return jobContext;
         }
 
     }
