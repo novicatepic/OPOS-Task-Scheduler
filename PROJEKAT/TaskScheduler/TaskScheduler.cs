@@ -31,7 +31,7 @@ namespace TaskScheduler
             }
         }
 
-        public Job Schedule(JobSpecification jobSpecification)
+        private Job Schedule(JobSpecification jobSpecification)
         {
             //Want to disable wait() callouts when there is one job running => better implementation
             if(MaxConcurrentTasks == 1)
@@ -51,7 +51,8 @@ namespace TaskScheduler
                 onJobContinueRequested: HandleJobContinueRequested,
                 onJobStopped: HandleJobStopped,
                 onJobStarted: HandleJobStartTime,
-                onJobWait: HandleJobWaiting);
+                onJobWait: HandleJobWaiting,
+                isSeparate: false);
 
             //Either start the job if it can be started
             //Or put in in waiting queue
@@ -67,12 +68,12 @@ namespace TaskScheduler
             return new Job(jobContext);
         }
 
-        public Job ScheduleWithStart(JobSpecification jobSpecification)
+        public Job AddJobWithScheduling(JobSpecification jobSpecification)
         {
             return Schedule(jobSpecification); 
         }
 
-        public Job ScheduleWithoutStart(JobSpecification jobSpecification)
+        public Job AddJobWithoutScheduling(JobSpecification jobSpecification)
         {
             JobContext jobContext = new(
                 userJob: jobSpecification.UserJob,
@@ -85,7 +86,8 @@ namespace TaskScheduler
                 onJobContinueRequested: HandleJobContinueRequested,
                 onJobStopped: HandleJobStopped,
                 onJobStarted: HandleJobStartTime,
-                onJobWait: HandleJobWaiting);
+                onJobWait: HandleJobWaiting,
+                isSeparate: false);
 
             Job job = new Job(jobContext);
             jobsWihoutStart.Add(job);
@@ -93,7 +95,7 @@ namespace TaskScheduler
             return job;
         }
 
-        public void ScheduleUnstartedJob(Job job)
+        public void ScheduleUnscheduledJob(Job job)
         {
             if(jobsWihoutStart.Contains(job))
             {
@@ -118,27 +120,6 @@ namespace TaskScheduler
                     
                 }
             }
-        }
-
-
-        public Job StartJobOnSeparateProcess(JobSpecification jobSpecification)
-        {
-            JobContext jobContext = new(
-                userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                //priority = jobs priority
-                startTime: jobSpecification.StartTime,
-                finishTime: jobSpecification.FinishTime,
-                maxExecutionTime: jobSpecification.MaxExecutionTime,
-                onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
-                onJobPaused: HandleJobPaused,
-                onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped,
-                onJobStarted: HandleJobStartTime,
-                onJobWait: HandleJobWaiting);
-
-            jobContext.Start();
-
-            return new Job(jobContext);
         }
 
         //Remove job from running jobs

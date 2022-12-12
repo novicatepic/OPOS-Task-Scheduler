@@ -25,7 +25,7 @@ namespace TaskScheduler
 
         private int numWaited = 0;
         private bool waited = false;
-
+        private bool isSeparate = false;
         internal DateTime StartTime { get; init; }
         internal DateTime FinishTime { get; init; }
         internal int MaxExecutionTime { get; init; }
@@ -55,7 +55,7 @@ namespace TaskScheduler
             Action<JobContext> onJobContinueRequested,
             Action<JobContext> onJobStopped,
             Action<JobContext> onJobStarted,
-            Action<JobContext, JobContext> onJobWait)
+            Action<JobContext, JobContext> onJobWait, bool isSeparate)
         {
             this.userJob = userJob;
             thread = new(() =>
@@ -84,6 +84,33 @@ namespace TaskScheduler
             StartTime = startTime;
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
+            this.isSeparate = isSeparate;
+        }
+
+        public JobContext(IUserJob userJob, int priority, DateTime startTime, DateTime finishTime, int maxExecutionTime, bool isSeparate)
+        {
+            this.userJob = userJob;
+            thread = new(() =>
+            {
+                //Calls Run method from and Finishes, but it's not started yet, only declaring what thread will do
+                try
+                {
+                    userJob.Run(this);
+                }
+                finally
+                {
+                    if (!(jobState == JobState.Stopped))
+                    {
+                        Finish();
+                    }
+                }
+            });
+
+            Priority = priority;
+            StartTime = startTime;
+            FinishTime = finishTime;
+            MaxExecutionTime = maxExecutionTime;
+            this.isSeparate = isSeparate;
         }
 
         //Start() is either going to start the job
@@ -91,10 +118,10 @@ namespace TaskScheduler
         internal void Start()
         {
             //2010, 1, 1 some default date time
-            if (StartTime == new DateTime(2010, 1, 1))
-            {
-                tempTime = DateTime.Now;
-            }
+            //if (StartTime == new DateTime(2010, 1, 1))
+            //{
+            tempTime = DateTime.Now;
+            //}
             lock (jobContextLock)
             {
                 switch (jobState)
@@ -151,7 +178,11 @@ namespace TaskScheduler
                             waited = false;
                             waitOnOtherJobSemaphore.Release(numWaited);
                         }
-                        onJobFinished(this);
+                        if(!isSeparate) 
+                        {
+                            onJobFinished(this);
+                        }
+                        
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Job already finished.");
@@ -282,10 +313,18 @@ namespace TaskScheduler
                         break;
                     case JobState.Paused:
                         jobState = JobState.WaitingToResume;
-                        onJobContinueRequested(this);
+                        if (!isSeparate)
+                            onJobContinueRequested(this);
+                        else
+                        {
+                            jobState = JobState.Running;
+                            resumeSemaphore.Release();
+                        }
+                            
                         break;
                     case JobState.Stopped:
-                        onJobContinueRequested(this);
+                        if (!isSeparate)
+                            onJobContinueRequested(this);
                         break;
                     case JobState.WaitingToResume:
                         jobState = JobState.WaitingToResume;
@@ -339,9 +378,11 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                         jobState = JobState.Paused;
                         shouldPause = true;
-                        onJobPaused(this);
+                        if (!isSeparate)
+                            onJobPaused(this);
                         break;
                     case JobState.Running:
+                    case JobState.WaitingToResume:
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
@@ -371,10 +412,12 @@ namespace TaskScheduler
                     case JobState.Running:
                         break;
                     case JobState.Finished:
+                    case JobState.WaitingToResume:
                         break;
                     case JobState.Stopped:
                         //jobState = JobState.Finished;
-                        onJobStopped(this);
+                        if(!isSeparate)
+                            onJobStopped(this);
                         break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
@@ -404,8 +447,9 @@ namespace TaskScheduler
 
         public bool CheckFinishTime()
         {
-            //Base case
-            if (FinishTime.Year == 2010)
+            //Base cases
+            if (FinishTime.Year == 2010 || FinishTime.Year < DateTime.Now.Year || FinishTime.Month < DateTime.Now.Month || FinishTime.Hour < DateTime.Now.Hour
+                || FinishTime.Day < DateTime.Now.Day)
             {
                 return false;
             }
