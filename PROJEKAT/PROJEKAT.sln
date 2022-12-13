@@ -8,7 +8,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PROJEKAT", "PROJEKAT\PROJEK
 		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538} = {5C2D628C-8E8E-44B2-8419-9B70B2AFF538}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskScheduler", "TaskScheduler\TaskScheduler.csproj", "{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TaskScheduler", "TaskScheduler\TaskScheduler.csproj", "{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GUIApp", "GUIApp\GUIApp.csproj", "{BB733915-5664-4469-8627-E946E06E1507}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JobCreationForm", "JobCreationForm\JobCreationForm.csproj", "{B8C85254-0829-4D11-A9B8-AB3FBC82BF04}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +28,14 @@ Global
 		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5C2D628C-8E8E-44B2-8419-9B70B2AFF538}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BB733915-5664-4469-8627-E946E06E1507}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BB733915-5664-4469-8627-E946E06E1507}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BB733915-5664-4469-8627-E946E06E1507}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BB733915-5664-4469-8627-E946E06E1507}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8C85254-0829-4D11-A9B8-AB3FBC82BF04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8C85254-0829-4D11-A9B8-AB3FBC82BF04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8C85254-0829-4D11-A9B8-AB3FBC82BF04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8C85254-0829-4D11-A9B8-AB3FBC82BF04}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
