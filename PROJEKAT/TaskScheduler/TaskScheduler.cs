@@ -21,6 +21,7 @@ namespace TaskScheduler
 
         //If set to true, it's goin to be FIFO
         //Otherwise it's goint to be priority
+
         public TaskScheduler(bool fifoflag) {
             if(fifoflag)
             {

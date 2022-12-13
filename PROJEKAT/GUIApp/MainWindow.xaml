@@ -14,22 +14,27 @@
                 <Separator Margin="10, 0, 0, 0"></Separator>
                 <ComboBox
                 Width="770"
-                x:Name="algorithmComboBox"
-                Text="Bla"
+                x:Name="algorithmComboBox" 
                 >
-                    <ComboBoxItem>FIFO</ComboBoxItem>
-                    <ComboBoxItem>Priority Queue</ComboBoxItem>
+                    <ComboBoxItem Name="fifoCbox" Selected="ComboBoxItem_Selected">FIFO</ComboBoxItem>
+                    <ComboBoxItem Name="priorityCbox"  Selected="ComboBoxItem_Selected_1">Priority Queue</ComboBoxItem>
                 </ComboBox>
             </StackPanel>
             <Separator Margin="0, 20, 0, 10"></Separator>
             <Button 
                 x:Name="createButton"
-                Margin="20, 100, 0, 20"
+                IsEnabled="False"
+                Margin="10, 10, 0, 20"
                 Width="150"
                 Height="40"
                 HorizontalAlignment="Left"
                 Click="createButton_Click"
                 >Create a job</Button>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Input maximum concurrent tasks: " FontSize="20"></TextBlock>
+                <TextBox Name="numTasksBox"  Width="200" TextChanged="numTasksBox_TextChanged" Text="1" TextAlignment="Center" FontSize="20"></TextBox>
+            </StackPanel>
+            
             <Separator Margin="0, 100, 0, 100"></Separator>
             <Separator Margin="15"></Separator>
             <StackPanel Orientation="Horizontal">

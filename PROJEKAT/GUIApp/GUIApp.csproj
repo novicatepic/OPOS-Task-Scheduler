@@ -8,7 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JobCreationForm\JobCreationForm.csproj" />
+    <ProjectReference Include="..\PROJEKAT\PROJEKAT.csproj" />
+    <ProjectReference Include="..\TaskScheduler\TaskScheduler.csproj" />
   </ItemGroup>
 
 </Project>
