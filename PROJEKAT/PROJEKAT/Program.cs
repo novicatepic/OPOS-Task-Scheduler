@@ -1,26 +1,32 @@
 ﻿using PROJEKAT;
 using TaskScheduler;
+using TaskScheduler.Queue;
+using TaskScheduler.Scheduler;
 
-TaskScheduler.TaskScheduler taskScheduler = new(fifoflag: true)
+AbstractScheduler taskScheduler = new PrioritySchedulerPreemption()
 {
-    MaxConcurrentTasks = 2
+    MaxConcurrentTasks = 1,
+    //jobQueue = new PriorityQueue()
 };
+
+//PriorityQueue pq = taskScheduler.jobQueue as  PriorityQueue;
+//pq.SetWithPreemption(true);
 
 Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
-    NumIterations = 10,
-    SleepTime = 1000
+    NumIterations = 5,
+    SleepTime = 500
 })
-{ Priority = 5, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45), MaxExecutionTime = 5000}) ;
+{ Priority = 4, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45), MaxExecutionTime = 5000}) ;
 
-Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
     NumIterations = 5,
-    SleepTime = 1000
+    SleepTime = 500
 })
-{ Priority = 1 });
+{ Priority = 2 });
 
 Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
@@ -28,37 +34,48 @@ Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
     NumIterations = 5,
     SleepTime = 500
 })
-
-
-{ Priority = 7 });
+{ Priority = 1});
 
 Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job X",
+    NumIterations = 5,
+    SleepTime = 500
+})
+{ Priority = 3} );
+
+/*Job jobX2 = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job X1",
     NumIterations = 10,
     SleepTime = 500
 })
-{ Priority = 1} );
+{ Priority = 0 });*/
 
 Thread.Sleep(1000);
-jobA.Wait();
-taskScheduler.ScheduleUnscheduledJob(jobB);
+jobC.RequestPause();
+//jobB.RequestPause();
+//jobA.Wait();
+//taskScheduler.ScheduleUnscheduledJob(jobB);
 Thread.Sleep(1000);
-jobA.RequestContinue();
+jobC.RequestContinue();
+//jobB.RequestContinue();
+//jobA.RequestContinue();
 
-Job manual = new Job(new JobSpecification(new DemoUserJob()
+/*Job manual = new Job(new JobSpecification(new DemoUserJob()
 {
     Name = "Manually created job",
     NumIterations = 5,
     SleepTime = 750
-}));
+}));*/
 Thread.Sleep(1000);
+//jobA.Wait();
 //jobA.Wait(jobC);
-manual.StartJobAsSeparateProcess();
+//manual.StartJobAsSeparateProcess();
 //Thread.Sleep(1000);
-manual.RequestPause();
+//manual.RequestPause();
 Thread.Sleep(3000);
-manual.RequestContinue();
+//manual.RequestContinue();
 //manual.Wait(jobA);
 //manual.Wait();
 

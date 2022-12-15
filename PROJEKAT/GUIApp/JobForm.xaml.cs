@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using TaskScheduler;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace GUIApp
 {
@@ -44,9 +45,13 @@ namespace GUIApp
         private int numIterations = 3;
         private int iterations = 0;
         private JobSpecification jobSpecification = null;
-        public JobForm()
+
+        MainWindow mainWindow;
+
+        public JobForm(MainWindow mainWindow)
         {
             InitializeComponent();
+            this.mainWindow = mainWindow;
             //checkBoxYes.IsChecked = false;
             //checkBoxNo.IsChecked = false;
         }
@@ -161,7 +166,7 @@ namespace GUIApp
             }
         }
 
-        private void confirmButton_Click(object sender, RoutedEventArgs e)
+        /*private void confirmButton_Click(object sender, RoutedEventArgs e)
         {
 
             startDate = new DateTime(startYear, startMonth, startDay, startHours, startMinutes, startSeconds);
@@ -181,6 +186,82 @@ namespace GUIApp
             {
                 MainWindow.taskScheduler.AddJobWithoutScheduling(jobSpecification);
             }
+        }*/
+
+        public async void confirmButton_Click(object sender, RoutedEventArgs e)
+        {
+            //Task<JobSpecification> taskJobSpec = new Task<>()
+            //JobSpecification[] result = new JobSpecification[1];
+            startDate = new DateTime(startYear, startMonth, startDay, startHours, startMinutes, startSeconds);
+            endDate = new DateTime(endYear, endMonth, endDay, endHours, endMinutes, endSeconds);
+            jobSpecification = new JobSpecification(new DemoUserJob()
+            {
+                Name = this.jobName,
+                NumIterations = numIterations,
+                SleepTime = sleepTime
+            })
+            { Priority = priority, StartTime = startDate, FinishTime = endDate, MaxExecutionTime = maxExecTime };
+            if (GetStartJob())
+            {
+                mainWindow.taskScheduler.AddJobWithScheduling(jobSpecification);
+            }
+            else
+            {
+                mainWindow.taskScheduler.AddJobWithoutScheduling(jobSpecification);
+            }
+            StackPanel sp = new StackPanel();
+            sp.Orientation = Orientation.Horizontal;
+            TextBlock jobName = new TextBlock();
+            jobName.Text = this.jobName;
+            jobName.Width = 192;
+            jobName.FontSize = 12;
+            jobName.TextAlignment = TextAlignment.Center;
+            //TextAlignment = "Center" Text = "Demo job" Width = "192" FontSize = "12"
+            //< TextBlock TextAlignment = "Center" Text = "5" Width = "65" FontSize = "12" ></ TextBlock >
+            TextBlock jobPriority = new TextBlock();
+            jobPriority.Text = this.priority.ToString();
+            jobPriority.TextAlignment = TextAlignment.Center;
+            jobPriority.Width = 65;
+            jobPriority.FontSize = 12; 
+            ProgressBar progressBar = new ProgressBar();
+            //< ProgressBar x: Name = "pB" Width = "400" ></ ProgressBar >
+            progressBar.Width = 400;
+            TextBlock jobSt = new TextBlock();
+            jobSt.Text = "Not started";
+            //< TextBlock TextAlignment = "Center" Text = "Waiing to resume" Width = "100" FontSize = "12" ></ TextBlock >
+            jobSt.TextAlignment = TextAlignment.Center;
+            jobSt.Width = 100;
+            jobSt.FontSize = 12;
+            sp.Children.Add(jobName);
+            sp.Children.Add(jobPriority);
+            sp.Children.Add(progressBar);
+            sp.Children.Add(jobSt);
+            StackPanel buttonPanel = new StackPanel();
+            buttonPanel.Orientation = Orientation.Horizontal;
+            Button startButton = new Button();
+            startButton.Name = "start";
+            startButton.Content = "Start";
+            Button pauseButton = new Button();
+            pauseButton.Name = "pause";
+            pauseButton.Content = "Pause";
+            Button continueButton = new Button();
+            continueButton.Name = "continue";
+            continueButton.Content = "Continue";
+            Button stopButton = new Button();
+            stopButton.Name = "stop";
+            stopButton.Content = "Stop";
+            Button removeButton = new Button();
+            removeButton.Name = "remove";
+            removeButton.Content = "Remove";
+            buttonPanel.Children.Add(startButton);
+            buttonPanel.Children.Add(pauseButton);
+            buttonPanel.Children.Add(continueButton);
+            buttonPanel.Children.Add(stopButton);
+            buttonPanel.Children.Add(removeButton);
+            sp.Children.Add(buttonPanel);
+            mainWindow.MainPanel.Children.Add(sp);
+            //result[0] = jobSpecification; 
+            //return result;
         }
 
         private bool GetStartJob()

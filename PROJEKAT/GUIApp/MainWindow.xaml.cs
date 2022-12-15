@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using TaskScheduler;
 
 namespace GUIApp
 {
@@ -22,19 +22,24 @@ namespace GUIApp
     /// </summary>
     public partial class MainWindow : Window
     {
-        internal static TaskScheduler.TaskScheduler taskScheduler = null;
+        internal TaskScheduler.Scheduler.FIFOScheduler taskScheduler = null;
 
-
+        ProgressBar[] progressBars; 
+ 
 
         public MainWindow()
         {
             InitializeComponent();
+            //jobForm = new JobForm(this);
         }
 
         private void createButton_Click(object sender, RoutedEventArgs e)
         {
-            JobForm jobForm = new JobForm();
+            JobForm jobForm = new JobForm(this);
             jobForm.Show();
+            //Task.Run(() => jobForm.confirmButton_Click(new object(), new RoutedEventArgs()));
+            //await jobForm.confirmButton_Click(new object(), new RoutedEventArgs());
+            //MessageBox.Show("Awaited");
         }
 
         //FIFO scheduling selected
@@ -60,5 +65,8 @@ namespace GUIApp
                 taskScheduler.MaxConcurrentTasks = Int32.Parse(numTasksBox.Text);
             }          
         }
+
+
+
     }
 }

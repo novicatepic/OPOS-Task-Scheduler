@@ -8,7 +8,7 @@
         Title="Thread pool" Height="700" Width="1000">
     <Border Margin="20" BorderThickness="2" BorderBrush="Black">
 
-        <StackPanel Orientation="Vertical">
+        <StackPanel Orientation="Vertical" x:Name="MainPanel">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Choose algorithm: " FontSize="18"></TextBlock>
                 <Separator Margin="10, 0, 0, 0"></Separator>
@@ -50,7 +50,7 @@
                 <TextBlock TextAlignment="Center" Text="5" Width="65" FontSize="12"></TextBlock>
                 <ProgressBar x:Name="pB" Width="400"></ProgressBar>
                 <TextBlock TextAlignment="Center" Text="Waiing to resume" Width="100" FontSize="12"></TextBlock>
-                <StackPanel Orientation="Horizontal">
+                <StackPanel Orientation="Horizontal" x:Name="buttonPanelM">
                     <Button x:Name="startButton">Start</Button>
                     <Button>Pause</Button>
                     <Button>Continue</Button>
@@ -58,7 +58,7 @@
                     <Button>Remove</Button>
                 </StackPanel>
             </StackPanel>
-            <Separator Margin="100"></Separator>
+            
             
 
         </StackPanel>

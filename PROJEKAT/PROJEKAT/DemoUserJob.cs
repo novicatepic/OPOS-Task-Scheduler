@@ -20,7 +20,8 @@ namespace PROJEKAT
         {
             Console.WriteLine(Name + " started.");
 
-            for(int i = 0; i < NumIterations; i++) {
+            for(int i = 0; i < NumIterations; i++) 
+            {
                 Console.WriteLine($"{Name}: {i}");
                 Thread.Sleep(SleepTime);
                 jobApi.CheckForPause();
@@ -30,6 +31,8 @@ namespace PROJEKAT
                     break;
                 }
                 jobApi.CheckForStoppage();
+
+                jobApi.CheckForPriorityStoppage();
 
                 if(jobApi.CheckConditions())
                 {
