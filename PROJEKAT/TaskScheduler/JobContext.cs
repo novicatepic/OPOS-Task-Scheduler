@@ -49,6 +49,7 @@ namespace TaskScheduler
         internal bool shouldLeave = false;
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
+        
 
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
@@ -593,6 +594,10 @@ namespace TaskScheduler
                         onJobPaused(this);
                     }
                 }
+                /*if(sliceTime > 0)
+                {
+
+                }*/
                 /*switch (jobState)
                 {
                     case JobState.NotStarted:
@@ -709,5 +714,12 @@ namespace TaskScheduler
                 sliceSemaphore.Wait();
             }
         }
+
+        internal int sliceTime = 0;
+        internal void SetSliceTime(int sliceTime)
+        {
+            this.sliceTime = sliceTime * 1000;      //convert it to ms
+        }
+
     }
 }

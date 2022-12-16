@@ -75,7 +75,7 @@
 
         public void RequestResource(Resource resource)
         {
-            throw new NotImplementedException();
+            //jobContext.RequestResource(resource);
         }
 
         internal JobContext GetJobContext()

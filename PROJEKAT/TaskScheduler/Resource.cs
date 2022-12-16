@@ -10,6 +10,7 @@ namespace TaskScheduler
     {
         private string name;
         private static int uniqueID = 0;
+        private bool locked = false;
 
         public Resource(string name)
         {
@@ -22,5 +23,12 @@ namespace TaskScheduler
         {
             return name;
         }
+
+        public void LockResource()
+        {
+            locked = true;
+        }
+
+        public bool IsLocked() { return locked; }   
     }
 }
