@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler
 {
-    internal class Resource
+    public class Resource
     {
         private string name;
         private static int uniqueID = 0;

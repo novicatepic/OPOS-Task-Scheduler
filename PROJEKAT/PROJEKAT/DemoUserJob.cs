@@ -34,6 +34,8 @@ namespace PROJEKAT
 
                 jobApi.CheckForPriorityStoppage();
 
+                jobApi.CheckSliceStoppage();
+
                 if(jobApi.CheckConditions())
                 {
                     break;

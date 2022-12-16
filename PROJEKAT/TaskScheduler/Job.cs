@@ -73,6 +73,11 @@
             jobContext.Start();
         }
 
+        public void RequestResource(Resource resource)
+        {
+            throw new NotImplementedException();
+        }
+
         internal JobContext GetJobContext()
         {
             return jobContext;

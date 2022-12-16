@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.Contracts;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaskScheduler.Scheduler;
+﻿using TaskScheduler.Scheduler;
 
 namespace TaskScheduler
 {
@@ -20,6 +14,7 @@ namespace TaskScheduler
             Running,
             RunningWithPauseRequest,
             RunningWithPriorityRequest,
+            RunningWithSliceRequest,
             PriorityWaiting,
             WaitingToResume,
             Paused,
@@ -50,9 +45,10 @@ namespace TaskScheduler
         private static int numWaiters = 0;                      //static necessary!
         private IUserJob userJob;
         private bool jobStopped = false;
-        private DateTime tempTime;      //in case if user decided to specify MaxExecution time
+        internal DateTime tempTime;      //in case if user decided to specify MaxExecution time
         internal bool shouldLeave = false;
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
+        internal readonly SemaphoreSlim sliceSemaphore = new(0);
 
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
@@ -77,7 +73,6 @@ namespace TaskScheduler
                 {
                     if (!(jobState == JobState.Stopped))
                     {
-                        Console.WriteLine("fin!");
                         Finish();
                     }
                 }
@@ -125,12 +120,18 @@ namespace TaskScheduler
 
         //Start() is either going to start the job
         //Or it's going to resume the job if it was paused before
+        //private DateTime timeContinue = new DateTime(2010, 1, 1);
         internal void Start()
         {
             //2010, 1, 1 some default date time
             //if (StartTime == new DateTime(2010, 1, 1))
             //{
-            tempTime = DateTime.Now;
+            //if(!started)
+            //{
+            //    started = true;
+                tempTime = DateTime.Now;
+            //}
+            
             //}
             lock (jobContextLock)
             {
@@ -151,11 +152,36 @@ namespace TaskScheduler
                         throw new InvalidOperationException("Job already finished");
                     case JobState.WaitingToResume:
                         jobState = JobState.Running;
-                        resumeSemaphore.Release();                       
+                        resumeSemaphore.Release();
+                        //timeContinue = DateTime.Now;
                         break;
                     case JobState.PriorityWaiting:
                         jobState = JobState.Running;
-                        prioritySemaphore.Release();
+                        if (sliced)
+                        {
+                            sliced = false;
+                            sliceSemaphore.Release();
+                        }
+                        if(shouldWaitForPriority)
+                        {
+                            shouldWaitForPriority = false;
+                            prioritySemaphore.Release();
+                        }
+                        
+                        break;
+                    case JobState.Paused:
+                        if(sliced)
+                        {
+                            jobState = JobState.Running;
+                            sliced = false;
+                            sliceSemaphore.Release();
+                        }
+                        if(shouldWaitForPriority)
+                        {
+                            jobState = JobState.Running;
+                            shouldWaitForPriority = false;
+                            prioritySemaphore.Release();
+                        }
                         break;
                     case JobState.Stopped:
                         jobState = JobState.Running;
@@ -179,6 +205,8 @@ namespace TaskScheduler
                 {
                     case JobState.NotStarted:
                         throw new InvalidOperationException("Job not started");
+                    case JobState.Paused:
+                        break;
                     case JobState.RunningWithPauseRequest:
                     case JobState.Running:
                     case JobState.Stopped:
@@ -362,6 +390,7 @@ namespace TaskScheduler
         //Job is always going to check for a pause
         //After it has finished part of the job, and if pause was requested
         //Job goes into pause mode and waits (semaphore)
+        private DateTime pauseStarted = new DateTime(2010, 1, 1);
         public void CheckForPause()
         {
             bool shouldPause = false;
@@ -381,6 +410,8 @@ namespace TaskScheduler
                     case JobState.WaitingToResume:
                     case JobState.RunningWithPriorityRequest:
                     case JobState.PriorityWaiting:
+                    case JobState.RunningWithSliceRequest:
+                    case JobState.Paused:
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
@@ -393,6 +424,7 @@ namespace TaskScheduler
 
             if (shouldPause)
             {
+                pauseStarted = DateTime.Now;
                 resumeSemaphore.Wait();
             }
         }
@@ -413,6 +445,8 @@ namespace TaskScheduler
                     case JobState.WaitingToResume:
                     case JobState.RunningWithPriorityRequest:
                     case JobState.PriorityWaiting:
+                    case JobState.RunningWithSliceRequest:
+                    case JobState.Paused:
                         break;
                     case JobState.Stopped:
                         //jobState = JobState.Finished;
@@ -426,6 +460,7 @@ namespace TaskScheduler
         }
 
         //PROBABLY THERE IS A BETTER IMPLEMENTATION, AND THAT IS TO CHECK TIME SOMEWHERE INTERNALLY, THIS IS NOT PRECISE ENOUGH
+        private double differenceInMilliseconds = 0;
         public bool CheckExecutionTime()
         {
             //If user didn't set max execution time, we don't really care
@@ -435,7 +470,14 @@ namespace TaskScheduler
             }
             //If execution time is longer that specified, it's time to stop
             TimeSpan ts = DateTime.Now - tempTime;
-            double differenceInMilliseconds = ts.TotalMilliseconds;
+            TimeSpan ts2 = DateTime.Now - DateTime.Now;
+            /*if(pauseStarted.Year != 2010)
+            {
+                ts2 = timeContinue - pauseStarted;
+                pauseStarted = new DateTime(2010, 1, 1);
+            }*/
+            Console.WriteLine("MS DIFFERENCE: " + differenceInMilliseconds);
+            differenceInMilliseconds = ts.TotalMilliseconds /*- ts2.TotalMilliseconds*/;
             //If job worked longer than it should have work
             if (differenceInMilliseconds >= MaxExecutionTime)
             {
@@ -443,6 +485,11 @@ namespace TaskScheduler
             }
             //Else return false
             return false;
+        }
+
+        public bool CheckSliceTime()
+        {
+            throw new NotImplementedException();
         }
 
         public bool CheckFinishTime()
@@ -507,7 +554,7 @@ namespace TaskScheduler
         {
             lock (jobContextLock)
             {
-                switch (jobState)
+                /*switch (jobState)
                 {
                     case JobState.NotScheduled:
                         throw new InvalidOperationException("Job not scheduled!");
@@ -527,7 +574,8 @@ namespace TaskScheduler
                     default:
                         throw new InvalidOperationException("Invalid job state");
 
-                }
+                }*/
+                shouldWaitForPriority = true;
             }
         }
 
@@ -537,7 +585,15 @@ namespace TaskScheduler
         {            
             lock (jobContextLock)
             {
-                switch (jobState)
+                if(shouldWaitForPriority)
+                {
+                    jobState = JobState.Paused;
+                    if(!isSeparate)
+                    {
+                        onJobPaused(this);
+                    }
+                }
+                /*switch (jobState)
                 {
                     case JobState.NotStarted:
                         throw new InvalidOperationException("Invalid job state.");
@@ -546,7 +602,6 @@ namespace TaskScheduler
                     case JobState.RunningWithPriorityRequest:
                         jobState = JobState.PriorityWaiting;
                         //jobState = JobState.Paused;
-                        Console.WriteLine("CHECKED PRIORITY");
                         shouldWaitForPriority = true;
                         //wasPrioritased = true;
                         //Stole onJobPaused handler so I don't have to make million handlers
@@ -555,6 +610,9 @@ namespace TaskScheduler
                         break;
                     case JobState.Running:
                     case JobState.WaitingToResume:
+                    case JobState.RunningWithSliceRequest:
+                    case JobState.PriorityWaiting:
+                    case JobState.Paused:
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
@@ -562,13 +620,93 @@ namespace TaskScheduler
                         break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
-                }
+                }*/
             }
 
             if (shouldWaitForPriority)
             {
-                Console.WriteLine("Wait");
                 prioritySemaphore.Wait();
+            }
+        }
+
+        internal void RequestSliceStoppage()
+        {
+            lock (jobContextLock)
+            {
+                /*switch (jobState)
+                {
+                    case JobState.NotScheduled:
+                        throw new InvalidOperationException("Job not scheduled!");
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Job not started!");
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Job finished!");    //I can use break as well here
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        jobState = JobState.RunningWithSliceRequest;
+                        break;
+                    case JobState.WaitingToResume:
+                    case JobState.Paused:
+                    case JobState.Stopped:
+                    case JobState.RunningWithPriorityRequest:
+                    case JobState.RunningWithSliceRequest:
+                    case JobState.PriorityWaiting:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+
+                }*/
+                sliced = true;
+            }
+        }
+
+        internal bool sliced = false;
+        public void CheckSliceStoppage()
+        {
+            lock (jobContextLock)
+            {
+                if(sliced)
+                {
+                    jobState = JobState.Paused;
+                    if (!isSeparate)
+                    {
+                        onJobPaused(this);
+                    }
+                }
+                
+                //WORKS
+                /*switch (jobState)
+                {
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.RunningWithPauseRequest:
+                        break;
+                    case JobState.RunningWithSliceRequest:
+                        sliced = true;
+                        jobState = JobState.PriorityWaiting;
+                        //shouldWaitForPriority = true;
+                        //Again, stole and modified pause handler -> less methonds, maybe not OOP, but easier for me
+                        if (!isSeparate)
+                            onJobPaused(this);
+                        break;
+                    case JobState.Running:
+                    case JobState.WaitingToResume:
+                    case JobState.RunningWithPriorityRequest:
+                    case JobState.PriorityWaiting:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }*/
+            }
+
+            if (sliced)
+            {
+                Console.WriteLine("WAITING");
+                sliceSemaphore.Wait();
             }
         }
     }

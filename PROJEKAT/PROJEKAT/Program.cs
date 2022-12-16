@@ -3,6 +3,11 @@ using TaskScheduler;
 using TaskScheduler.Queue;
 using TaskScheduler.Scheduler;
 
+AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
+{
+    MaxConcurrentTasks = 1
+};
+
 AbstractScheduler taskScheduler = new PrioritySchedulerPreemption()
 {
     MaxConcurrentTasks = 1,
@@ -15,10 +20,10 @@ AbstractScheduler taskScheduler = new PrioritySchedulerPreemption()
 Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
-    NumIterations = 5,
+    NumIterations = 10,
     SleepTime = 500
 })
-{ Priority = 4, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45), MaxExecutionTime = 5000}) ;
+{ Priority = 4, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)}) ;
 
 Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
@@ -31,10 +36,10 @@ Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job C",
-    NumIterations = 5,
+    NumIterations = 10,
     SleepTime = 500
 })
-{ Priority = 1});
+{ Priority = 1 });
 
 Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
@@ -53,12 +58,13 @@ Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 { Priority = 0 });*/
 
 Thread.Sleep(1000);
-jobC.RequestPause();
+
+//jobC.RequestPause();
 //jobB.RequestPause();
 //jobA.Wait();
 //taskScheduler.ScheduleUnscheduledJob(jobB);
-Thread.Sleep(1000);
-jobC.RequestContinue();
+Thread.Sleep(5000);
+//jobC.RequestContinue();
 //jobB.RequestContinue();
 //jobA.RequestContinue();
 

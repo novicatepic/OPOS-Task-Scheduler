@@ -62,8 +62,8 @@ namespace TaskScheduler.Scheduler
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
                     if (dequeuedJobContext.shouldWaitForPriority)
                     {
-                        Console.WriteLine("LOL!");
-                        dequeuedJobContext.shouldWaitForPriority = false;
+                        //Console.WriteLine("LOL!");
+                        //dequeuedJobContext.shouldWaitForPriority = false;
                        // dequeuedJobContext.prioritySemaphore.Release();
                         dequeuedJobContext.Start();
                         

@@ -15,6 +15,8 @@ namespace TaskScheduler
         public bool CheckExecutionTime();
         public bool CheckFinishTime();
         public void CheckForPriorityStoppage();
+
+        public void CheckSliceStoppage();
         public bool CheckConditions()
         {
             if(CheckExecutionTime() || CheckFinishTime())
