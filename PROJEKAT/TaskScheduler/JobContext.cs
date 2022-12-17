@@ -13,9 +13,6 @@ namespace TaskScheduler
             NotStarted,
             Running,
             RunningWithPauseRequest,
-            RunningWithPriorityRequest,
-            RunningWithSliceRequest,
-            PriorityWaiting,
             WaitingToResume,
             Paused,
             Stopped,
@@ -31,13 +28,14 @@ namespace TaskScheduler
         internal int MaxExecutionTime { get; init; }
         private JobState jobState = JobState.NotStarted;
         private readonly Thread thread;
-        private readonly object jobContextLock = new();
+        internal readonly object jobContextLock = new();
         private readonly Action<JobContext> onJobFinished;
         private readonly Action<JobContext> onJobPaused;
         private readonly Action<JobContext> onJobContinueRequested;
         private readonly Action<JobContext> onJobStopped;
         private readonly Action<JobContext> onJobStarted;
         private readonly Action<JobContext, JobContext> onJobWait;
+        private readonly Action<JobContext, Resource> onResourceWanted;
         internal int Priority { get; init; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
@@ -49,8 +47,10 @@ namespace TaskScheduler
         internal bool shouldLeave = false;
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
-        
 
+
+        private static int staticId = 0;
+        private int id = 0;
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
             DateTime finishTime,
@@ -60,7 +60,9 @@ namespace TaskScheduler
             Action<JobContext> onJobContinueRequested,
             Action<JobContext> onJobStopped,
             Action<JobContext> onJobStarted,
-            Action<JobContext, JobContext> onJobWait, bool isSeparate)
+            Action<JobContext, JobContext> onJobWait,
+            Action<JobContext, Resource> onResourceWanted,
+            bool isSeparate)
         {
             this.userJob = userJob;
             thread = new(() =>
@@ -86,10 +88,12 @@ namespace TaskScheduler
             this.onJobStopped = onJobStopped;
             this.onJobStarted = onJobStarted;
             this.onJobWait = onJobWait;
+            this.onResourceWanted = onResourceWanted;
             StartTime = startTime;
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
             this.isSeparate = isSeparate;
+            id = staticId++;
         }
 
         public JobContext(IUserJob userJob, int priority, DateTime startTime, DateTime finishTime, int maxExecutionTime, bool isSeparate)
@@ -156,20 +160,6 @@ namespace TaskScheduler
                         resumeSemaphore.Release();
                         //timeContinue = DateTime.Now;
                         break;
-                    case JobState.PriorityWaiting:
-                        jobState = JobState.Running;
-                        if (sliced)
-                        {
-                            sliced = false;
-                            sliceSemaphore.Release();
-                        }
-                        if(shouldWaitForPriority)
-                        {
-                            shouldWaitForPriority = false;
-                            prioritySemaphore.Release();
-                        }
-                        
-                        break;
                     case JobState.Paused:
                         if(sliced)
                         {
@@ -182,6 +172,12 @@ namespace TaskScheduler
                             jobState = JobState.Running;
                             shouldWaitForPriority = false;
                             prioritySemaphore.Release();
+                        }
+                        if(shouldWaitForResource)
+                        {
+                            jobState = JobState.Running;
+                            shouldWaitForResource = false; 
+                            resourceSemaphore.Release();
                         }
                         break;
                     case JobState.Stopped:
@@ -409,9 +405,6 @@ namespace TaskScheduler
                         break;
                     case JobState.Running:
                     case JobState.WaitingToResume:
-                    case JobState.RunningWithPriorityRequest:
-                    case JobState.PriorityWaiting:
-                    case JobState.RunningWithSliceRequest:
                     case JobState.Paused:
                         break;
                     case JobState.Finished:
@@ -444,9 +437,6 @@ namespace TaskScheduler
                         break;
                     case JobState.Finished:
                     case JobState.WaitingToResume:
-                    case JobState.RunningWithPriorityRequest:
-                    case JobState.PriorityWaiting:
-                    case JobState.RunningWithSliceRequest:
                     case JobState.Paused:
                         break;
                     case JobState.Stopped:
@@ -555,33 +545,11 @@ namespace TaskScheduler
         {
             lock (jobContextLock)
             {
-                /*switch (jobState)
-                {
-                    case JobState.NotScheduled:
-                        throw new InvalidOperationException("Job not scheduled!");
-                    case JobState.NotStarted:
-                        throw new InvalidOperationException("Job not started!");
-                    case JobState.Finished:
-                        throw new InvalidOperationException("Job finished!");    //I can use break as well here
-                    case JobState.RunningWithPauseRequest:
-                    case JobState.Running:
-                        jobState = JobState.RunningWithPriorityRequest;
-                        break;
-                    case JobState.WaitingToResume:
-                    case JobState.Paused:
-                    case JobState.Stopped:
-                    case JobState.RunningWithPriorityRequest:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid job state");
-
-                }*/
                 shouldWaitForPriority = true;
             }
         }
 
         internal bool shouldWaitForPriority = false;
-        //private bool wasPrioritased = false;
         public void CheckForPriorityStoppage()
         {            
             lock (jobContextLock)
@@ -594,38 +562,6 @@ namespace TaskScheduler
                         onJobPaused(this);
                     }
                 }
-                /*if(sliceTime > 0)
-                {
-
-                }*/
-                /*switch (jobState)
-                {
-                    case JobState.NotStarted:
-                        throw new InvalidOperationException("Invalid job state.");
-                    case JobState.RunningWithPauseRequest:
-                        break;
-                    case JobState.RunningWithPriorityRequest:
-                        jobState = JobState.PriorityWaiting;
-                        //jobState = JobState.Paused;
-                        shouldWaitForPriority = true;
-                        //wasPrioritased = true;
-                        //Stole onJobPaused handler so I don't have to make million handlers
-                        if (!isSeparate)
-                            onJobPaused(this);
-                        break;
-                    case JobState.Running:
-                    case JobState.WaitingToResume:
-                    case JobState.RunningWithSliceRequest:
-                    case JobState.PriorityWaiting:
-                    case JobState.Paused:
-                        break;
-                    case JobState.Finished:
-                        throw new InvalidOperationException("Invalid job state.");
-                    case JobState.Stopped:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid job state");
-                }*/
             }
 
             if (shouldWaitForPriority)
@@ -638,29 +574,6 @@ namespace TaskScheduler
         {
             lock (jobContextLock)
             {
-                /*switch (jobState)
-                {
-                    case JobState.NotScheduled:
-                        throw new InvalidOperationException("Job not scheduled!");
-                    case JobState.NotStarted:
-                        throw new InvalidOperationException("Job not started!");
-                    case JobState.Finished:
-                        throw new InvalidOperationException("Job finished!");    //I can use break as well here
-                    case JobState.RunningWithPauseRequest:
-                    case JobState.Running:
-                        jobState = JobState.RunningWithSliceRequest;
-                        break;
-                    case JobState.WaitingToResume:
-                    case JobState.Paused:
-                    case JobState.Stopped:
-                    case JobState.RunningWithPriorityRequest:
-                    case JobState.RunningWithSliceRequest:
-                    case JobState.PriorityWaiting:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid job state");
-
-                }*/
                 sliced = true;
             }
         }
@@ -678,39 +591,10 @@ namespace TaskScheduler
                         onJobPaused(this);
                     }
                 }
-                
-                //WORKS
-                /*switch (jobState)
-                {
-                    case JobState.NotStarted:
-                        throw new InvalidOperationException("Invalid job state.");
-                    case JobState.RunningWithPauseRequest:
-                        break;
-                    case JobState.RunningWithSliceRequest:
-                        sliced = true;
-                        jobState = JobState.PriorityWaiting;
-                        //shouldWaitForPriority = true;
-                        //Again, stole and modified pause handler -> less methonds, maybe not OOP, but easier for me
-                        if (!isSeparate)
-                            onJobPaused(this);
-                        break;
-                    case JobState.Running:
-                    case JobState.WaitingToResume:
-                    case JobState.RunningWithPriorityRequest:
-                    case JobState.PriorityWaiting:
-                        break;
-                    case JobState.Finished:
-                        throw new InvalidOperationException("Invalid job state.");
-                    case JobState.Stopped:
-                        break;
-                    default:
-                        throw new InvalidOperationException("Invalid job state");
-                }*/
             }
 
             if (sliced)
             {
-                Console.WriteLine("WAITING");
                 sliceSemaphore.Wait();
             }
         }
@@ -719,6 +603,80 @@ namespace TaskScheduler
         internal void SetSliceTime(int sliceTime)
         {
             this.sliceTime = sliceTime * 1000;      //convert it to ms
+        }
+
+        internal SemaphoreSlim resourceSemaphore = new SemaphoreSlim(0);
+        internal bool shouldWaitForResource = false;
+        private bool wantsResourse = false;
+        internal void RequestResource(Resource resource)
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotScheduled:
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Requesting a resource when not started.");
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        //onResourceWanted(this, resource);
+                        waitedResource = resource;
+                        wantsResourse = true;
+                        break;
+                    case JobState.WaitingToResume:
+                        break;
+                    case JobState.Paused:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+        }
+
+        Resource waitedResource = null;
+        public void CheckForResourse()
+        {
+            //bool shouldPause = false;
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        //jobState = JobState.Paused;
+                        if(!isSeparate && wantsResourse)
+                        {
+                            wantsResourse = false;
+                            onResourceWanted(this, waitedResource);
+                        }
+                        break;
+                    case JobState.WaitingToResume:
+                    case JobState.Paused:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+
+            if (shouldWaitForResource)
+            {
+                resourceSemaphore.Wait();
+            }
+        }
+
+        public int GetID()
+        {
+            return id;
         }
 
     }

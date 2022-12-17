@@ -75,7 +75,7 @@
 
         public void RequestResource(Resource resource)
         {
-            //jobContext.RequestResource(resource);
+            jobContext.RequestResource(resource);
         }
 
         internal JobContext GetJobContext()

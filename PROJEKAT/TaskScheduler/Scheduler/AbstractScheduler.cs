@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaskScheduler.Graph;
 using TaskScheduler.Queue;
 
 namespace TaskScheduler.Scheduler
@@ -11,6 +12,8 @@ namespace TaskScheduler.Scheduler
     {
         public int MaxConcurrentTasks { get; set; } = 1;
         protected AbstractQueue jobQueue;
+        protected Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
+        private Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
         internal readonly HashSet<JobContext> runningJobs = new();
         private readonly HashSet<Job> jobsWihoutStart = new();
         protected readonly object schedulerLock = new();
@@ -25,19 +28,7 @@ namespace TaskScheduler.Scheduler
             }
             //When scheduling, context for a job will be created
             //UserJob is implemented by DemoUserJob
-            JobContext jobContext = new(
-                userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                //priority = jobs priority
-                startTime: jobSpecification.StartTime,
-                finishTime: jobSpecification.FinishTime,
-                maxExecutionTime: jobSpecification.MaxExecutionTime,
-                onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
-                onJobPaused: HandleJobPaused,
-                onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped,
-                onJobStarted: HandleJobStartTime,
-                onJobWait: HandleJobWaiting,
-                isSeparate: false);
+            JobContext jobContext = CreateJobContext(jobSpecification);
 
             //Either start the job if it can be started
             //Or put in in waiting queue
@@ -54,6 +45,25 @@ namespace TaskScheduler.Scheduler
             return new Job(jobContext);
         }
 
+        private JobContext CreateJobContext(JobSpecification jobSpecification)
+        {
+            JobContext jobContext = new(
+                            userJob: jobSpecification.UserJob,
+                            priority: jobSpecification.Priority,                //priority = jobs priority
+                            startTime: jobSpecification.StartTime,
+                            finishTime: jobSpecification.FinishTime,
+                            maxExecutionTime: jobSpecification.MaxExecutionTime,
+                            onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
+                            onJobPaused: HandleJobPaused,
+                            onJobContinueRequested: HandleJobContinueRequested,
+                            onJobStopped: HandleJobStopped,
+                            onJobStarted: HandleJobStartTime,
+                            onJobWait: HandleJobWaiting,
+                            onResourceWanted: HandleResourceWanted,
+                            isSeparate: false);
+            return jobContext;
+        }
+
         public Job AddJobWithScheduling(JobSpecification jobSpecification)
         {
             return Schedule(jobSpecification);
@@ -61,19 +71,7 @@ namespace TaskScheduler.Scheduler
 
         public Job AddJobWithoutScheduling(JobSpecification jobSpecification)
         {
-            JobContext jobContext = new(
-                userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                //priority = jobs priority
-                startTime: jobSpecification.StartTime,
-                finishTime: jobSpecification.FinishTime,
-                maxExecutionTime: jobSpecification.MaxExecutionTime,
-                onJobFinished: HandleJobFinished,                       //all the handlers are implemented in task scheduler
-                onJobPaused: HandleJobPaused,
-                onJobContinueRequested: HandleJobContinueRequested,
-                onJobStopped: HandleJobStopped,
-                onJobStarted: HandleJobStartTime,
-                onJobWait: HandleJobWaiting,
-                isSeparate: false);
+            JobContext jobContext = CreateJobContext(jobSpecification);
 
             jobContext.SetJobState(JobContext.JobState.NotScheduled);
 
@@ -113,6 +111,22 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
+                Console.WriteLine("PRIOR:2 " + jobContext.Priority);
+                if (resourceMap.ContainsKey(jobContext))
+                {
+                    resourceMap.Remove(jobContext);
+                }
+                if (whoHoldsResources.ContainsKey(jobContext))
+                {
+                    Console.WriteLine("KNOCK!");
+                    HashSet<JobContext> jb = whoHoldsResources[jobContext];
+                    foreach (var element in jb)
+                    {
+                        element.Start();
+                    }
+
+                    whoHoldsResources.Remove(jobContext);
+                }
             }
         }
 
@@ -147,22 +161,6 @@ namespace TaskScheduler.Scheduler
                 }
             }
         }
-
-        /*internal void HandleJobPrioritased(JobContext jobContext)
-        {
-            lock (schedulerLock)
-            {
-                Console.WriteLine("PRIOR: " + jobContext.Priority);
-                runningJobs.Remove(jobContext);
-                if (jobQueue.Count() > 0)
-                {
-                    JobContext dequeuedJobContext = jobQueue.Dequeue();
-                    runningJobs.Add(dequeuedJobContext);
-                    dequeuedJobContext.Start();
-                }
-                jobQueue.Enqueue(jobContext);
-            }
-        }*/
 
         //Either run job instantly if there's space for it 
         //Or put it in queue
@@ -209,24 +207,127 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal bool IsPreemptive()
+        internal void HandleResourceWanted(JobContext jobContext, Resource resource)
         {
-            PriorityQueue pq = jobQueue as PriorityQueue;
-            if (pq != null)
+            bool someoneHoldingResource = false;
+            lock (schedulerLock)
             {
-                return pq.GetWithPreemption();
+                Console.WriteLine("ENTERED");
+                //lock(jobContext.jobContextLock)
+                //{
+                foreach (var element in resourceMap)
+                {
+                    if (element.Value != null && element.Value.Contains(resource))
+                    {
+                        someoneHoldingResource = true;
+                        break;
+                    }
+                }
+                if (someoneHoldingResource)
+                {
+                    Console.WriteLine("RWAIT");
+                    for (int i = 0; i < resourceMap.Count; i++)
+                    {
+                        if (resourceMap.ElementAt(i).Value.Contains(resource))
+                        {
+                            Console.WriteLine("HOLDS");
+                            if (!whoHoldsResources.ContainsKey(resourceMap.ElementAt(i).Key))
+                            {
+                                //HashSet<JobContext> lmao = new();
+                                whoHoldsResources.Add(resourceMap.ElementAt(i).Key, new HashSet<JobContext>());
+                            }
+                            whoHoldsResources[resourceMap.ElementAt(i).Key].Add(jobContext);
+                            Console.WriteLine("PRIOR: " + resourceMap.ElementAt(i).Key.Priority);
+                            break;
+                        }
+                    }
+
+                }
+                else
+                {
+                    Console.WriteLine("RGOTIT");
+                    if (!resourceMap.ContainsKey(jobContext))
+                    {
+                        resourceMap.Add(jobContext, new HashSet<Resource>());
+                        HashSet<Resource> gotSet = new();
+                        resourceMap[jobContext].Add(resource);
+                    }
+                    else
+                    {
+                        HashSet<Resource> gotSet = new();
+                        resourceMap.TryGetValue(jobContext, out gotSet);
+                        if (gotSet.Contains(resource))
+                        {
+                            throw new InvalidOperationException("Can't request a resource you are already holding!");
+                        }
+                        resourceMap[jobContext].Add(resource);
+                    }
+                }
+
+                //}
             }
-            return false;
+
+            DeadlockDetectionGraph graph = MakeDetectionGraph();
+            graph.PrintMatrix();
+
+            if (someoneHoldingResource)
+            {
+                Console.WriteLine("WAIT!");
+                jobContext.SetJobState(JobContext.JobState.Paused);
+                jobContext.shouldWaitForResource = true;
+            }
+
         }
 
-        internal bool IsTimeSlicing()
+
+        //DeadlockDetectionGraph deadlockDetectionGraph = new();
+        private DeadlockDetectionGraph MakeDetectionGraph()
         {
-            PriorityQueue pq = jobQueue as PriorityQueue;
-            if (pq != null)
+            lock (schedulerLock)
             {
-                return pq.GetWithTimeSlicing();
+                var graphSize = runningJobs.Count;
+
+                DeadlockDetectionGraph deadlockDetectionGraph = new(graphSize);
+
+                //INITIALIZATION
+                for (int i = 0; i < graphSize; i++)
+                {
+                    deadlockDetectionGraph.nodes[i] = runningJobs.ElementAt(i).GetID();
+                }
+
+                for (int i = 0; i < graphSize; i++)
+                {
+                    for (int j = 0; j < graphSize; j++)
+                    {
+                        if (i != j)
+                        {
+                            if(whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
+                            {
+                                foreach(var element in whoHoldsResources[runningJobs.ElementAt(i)])
+                                {
+                                    int position = deadlockDetectionGraph.FindPositionOfState(element.GetID());
+                                    deadlockDetectionGraph.ms[i, j] = 1;
+                                }
+                            }
+                            else
+                            {
+                                deadlockDetectionGraph.ms[i, j] = 0;
+                            }
+                        }
+                        else
+                        {
+                            deadlockDetectionGraph.ms[i, j] = 0;
+                        }
+                    }
+                }
+
+                return deadlockDetectionGraph;
             }
-            return false;
         }
+
+
+
+        //private void
+
     }
 }

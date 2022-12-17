@@ -5,12 +5,12 @@ using TaskScheduler.Scheduler;
 
 AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
 {
-    MaxConcurrentTasks = 1
+    MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new PrioritySchedulerPreemptionSlicing()
+AbstractScheduler taskScheduler = new FIFOScheduler()
 {
-    MaxConcurrentTasks = 1,
+    MaxConcurrentTasks = 2,
     //jobQueue = new PriorityQueue()
 };
 
@@ -20,7 +20,7 @@ AbstractScheduler taskScheduler = new PrioritySchedulerPreemptionSlicing()
 Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
-    NumIterations = 10,
+    NumIterations = 100,
     SleepTime = 500
 })
 { Priority = 2, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)}) ;
@@ -28,7 +28,7 @@ Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
-    NumIterations = 5,
+    NumIterations = 100,
     SleepTime = 500
 })
 { Priority = 1 });
@@ -48,6 +48,21 @@ Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
     SleepTime = 500
 })
 { Priority = 4} );
+
+Resource a = new Resource("R1");
+Resource b = new Resource("R2");
+Thread.Sleep(200);
+jobA.RequestResource(a);
+Thread.Sleep(200);
+jobB.RequestResource(b);
+Thread.Sleep(200);
+//jobB.RequestResource(a);
+Thread.Sleep(200);
+jobA.RequestResource(b);
+//jobB.RequestResource(a);
+//jobA.RequestResource(b);
+//Thread.Sleep(2000);
+//jobC.RequestResource(a);
 
 /*Job jobX2 = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {

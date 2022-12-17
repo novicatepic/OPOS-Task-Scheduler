@@ -9,14 +9,15 @@ namespace TaskScheduler
     public class Resource
     {
         private string name;
-        private static int uniqueID = 0;
-        private bool locked = false;
+        private int id;
+        private static int uniqueID = 1;
+        //private bool locked = false;
 
         public Resource(string name)
         {
             this.name = name;
-            this.name += uniqueID;
-            uniqueID++;
+            this.name += id;
+            id = uniqueID++;
         }
 
         public string GetName()
@@ -24,11 +25,17 @@ namespace TaskScheduler
             return name;
         }
 
-        public void LockResource()
+        /*public void LockResource()
         {
             locked = true;
-        }
+        }*/
 
-        public bool IsLocked() { return locked; }   
+        /*public bool IsLocked()
+        {
+            return locked;
+        } */
+        
+        public static int GetUniqueID() { return uniqueID; }
+
     }
 }
