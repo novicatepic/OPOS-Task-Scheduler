@@ -7,33 +7,17 @@ using TaskScheduler.Graph;
 
 namespace TaskScheduler.Scheduler
 {
-    public class PrioritySchedulerNoPreemption : NonPreemptiveScheduler
+    public class NonPreemptiveScheduler : AbstractScheduler
     {
-        public PrioritySchedulerNoPreemption()
-        {
-            jobQueue = new Queue.PriorityQueue();
-        }
+        protected Dictionary<Resource, int> rememberPast = new();
 
         internal override void ScheduleJob(JobContext jobContext)
         {
-            lock(schedulerLock)
-            {
-                if (runningJobs.Count < MaxConcurrentTasks)
-                {
-                    runningJobs.Add(jobContext);
-                    jobContext.Start();
-                }
-                else
-                {
-                    jobQueue.Enqueue(jobContext, jobContext.Priority);
-
-                }
-            }            
+            //throw new NotImplementedException();
         }
 
-        /*internal override void HandleResourceWanted(JobContext jobContext, Resource resource)
+        internal override void HandleResourceWanted(JobContext jobContext, Resource resource)
         {
-
             lock (schedulerLock)
             {
                 JobContext resourceHolder = null;
@@ -44,10 +28,25 @@ namespace TaskScheduler.Scheduler
                     {
                         someoneHoldingResource = true;
                         //IF ELEMENT HOLDING THE RESOURCE HAS WEAKER PRIORITY
-                        if(element.Key.Priority > jobContext.Priority)
+                        if (element.Key.Priority > jobContext.Priority/* && element.Key.oldPriority == -1*/)
                         {
-                            //THEN REQUEST THE PRIORITY OF THE ELEMENT WITH BETTER PRIORITY (NO PREEMPTION)
-                            element.Key.InversePriority(jobContext.Priority);
+                            if (!rememberPast.ContainsKey(resource))
+                            {                               
+                                rememberPast.Add(resource, jobContext.Priority);
+                                element.Key.InversePriority(jobContext.Priority);
+                                Console.WriteLine("INVERSED!!!");
+                                //CheckPreemption(element.Key);
+                            }
+
+                            else if (rememberPast.ContainsKey(resource) && rememberPast[resource] > jobContext.Priority)
+                            {
+                                Console.WriteLine("ELSE");
+                                rememberPast[resource] = jobContext.Priority;
+                                element.Key.InversePriority(jobContext.Priority);
+                                //CheckPreemption(element.Key);
+                            }
+                            //Console.WriteLine("PRIORITY INVERSED!");
+
                         }
                         break;
                     }
@@ -120,6 +119,55 @@ namespace TaskScheduler.Scheduler
                     Console.WriteLine("Resource not allowed, deadlock would be caused!");
                 }
             }
-        }*/
+        }
+
+        internal override void HandleResourceReleased(JobContext jobContext, Resource resource)
+        {
+            lock (schedulerLock)
+            {
+                if (resourceMap.ContainsKey(jobContext))
+                {
+                    if (resourceMap[jobContext].Contains(resource))
+                    {
+                        resourceMap[jobContext].Remove(resource);
+                        if (jobContext.oldPriority != -1)
+                        {
+                            int prior = rememberPast[resource];
+                            jobContext.ReversePriority();
+                            Console.WriteLine("GOT BACK PRIORITY " + jobContext.Priority);
+                        }
+                        foreach (var job in jobWaitingOnResources)
+                        {
+                            if (job.Value.Contains(resource))
+                            {
+                                //Job doesn't wait on that resource anymore and that resource can continue to work :)
+                                //But only if he doesn't wait for anything else
+                                job.Value.Remove(resource);
+                                if (job.Value.Count == 0 && runningJobs.Count < MaxConcurrentTasks)
+                                {
+                                    runningJobs.Add(job.Key);
+                                    job.Key.Start();
+                                }
+                                else if (job.Value.Count == 0)
+                                {
+                                    //jobQueue.Enqueue(job.Key, job.Key.Priority);
+                                    //CheckPreemption(job.Key);
+                                }
+                                whoHoldsResources[jobContext].Remove(job.Key);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("Can't release a resource which is not held by the job!");
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Can't release a resource which is not held by the job!");
+                }
+            }
+        }
+
     }
 }

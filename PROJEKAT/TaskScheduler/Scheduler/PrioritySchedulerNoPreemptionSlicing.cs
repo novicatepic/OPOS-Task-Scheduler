@@ -7,7 +7,7 @@ using TaskScheduler.Queue;
 
 namespace TaskScheduler.Scheduler
 {
-    public class PrioritySchedulerNoPreemptionSlicing : AbstractScheduler, ISlicer
+    public class PrioritySchedulerNoPreemptionSlicing : NonPreemptiveScheduler, ISlicer
     {
 
         public PrioritySchedulerNoPreemptionSlicing()
@@ -42,12 +42,13 @@ namespace TaskScheduler.Scheduler
                 while (runningJobs.Count > 0 || jobQueue.Count() > 0)
                 {
                     //Optimising so I don't get fault
-                    Thread.Sleep(15);
+                    Thread.Sleep(500);
                     for (int i = 0; i < runningJobs.Count; i++)
                     {
-                        if (runningJobs.Count > 0)
+                        //ADDED JOBQUEUE PART BELOW IN IF
+                        if (runningJobs.Count > 0 && jobQueue.Count() > 0)
                         {
-                            //Console.WriteLine("YES!");
+                            Console.WriteLine("YES!");
                             TimeSpan ts = DateTime.Now - runningJobs.ElementAt(i).tempTime;
                             double ms = ts.TotalMilliseconds;
                             if (ms >= runningJobs.ElementAt(i).sliceTime && runningJobs.ElementAt(i).sliced == false)

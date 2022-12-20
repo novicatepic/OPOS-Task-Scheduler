@@ -8,7 +8,7 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
+AbstractScheduler taskScheduler = new PrioritySchedulerPreemptionSlicing()
 {
     MaxConcurrentTasks = 2
     //jobQueue = new PriorityQueue()
@@ -20,45 +20,60 @@ AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
 Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
-    NumIterations = 100,
-    SleepTime = 1000
+    NumIterations = 30,
+    SleepTime = 500
 })
-{ Priority = 2, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
+{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
 
-Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
-    NumIterations = 5,
+    NumIterations = 10,
+    SleepTime = 1000
+})
+{ Priority = 2 });
+
+Job jobC = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job C",
+    NumIterations = 15,
     SleepTime = 500
 })
 { Priority = 1 });
 
-Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
-{
-    Name = "Job C",
-    NumIterations = 5,
-    SleepTime = 500
-})
-{ Priority = 3 });
-
-Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobX = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job X",
-    NumIterations = 5,
+    NumIterations = 7,
     SleepTime = 500
 })
-{ Priority = 4} );
+{ Priority = 0} );
 
 Resource a = new Resource("R1");
 Resource b = new Resource("R2");
 Resource c = new Resource("R3");
 //Resource d = new Resource("R2");
-Thread.Sleep(200);
+Thread.Sleep(1000);
 jobA.RequestResource(a);
-//jobA.RequestPause();
-Thread.Sleep(300);
-//jobA.RequestContinue();
+Thread.Sleep(500);
+taskScheduler.ScheduleUnscheduledJob(jobB);
+Thread.Sleep(500);
 jobB.RequestResource(a);
+taskScheduler.ScheduleUnscheduledJob(jobC);
+//jobA.RequestPause();
+Thread.Sleep(4000);
+//jobC.RequestResource(a);
+Thread.Sleep(1000);
+//taskScheduler.ScheduleUnscheduledJob(jobX);
+Thread.Sleep(1000);
+//jobX.RequestResource(a);
+//jobB.RequestResource(a);
+Thread.Sleep(3000);
+Console.WriteLine("RELEASE CALLED!");
+jobA.ReleaseResource(a);
+//jobA.ReleaseResource(a);
+//jobA.RequestContinue();
+//jobB.RequestResource(a);
 //Thread.Sleep(200);
 //jobC.RequestResource(c);
 //Thread.Sleep(200);

@@ -24,17 +24,6 @@ namespace TaskScheduler
         {
             return name;
         }
-
-        /*public void LockResource()
-        {
-            locked = true;
-        }*/
-
-        /*public bool IsLocked()
-        {
-            return locked;
-        } */
-        
         public static int GetUniqueID() { return uniqueID; }
 
     }

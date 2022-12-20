@@ -1,4 +1,5 @@
-﻿using TaskScheduler.Scheduler;
+﻿using System.Resources;
+using TaskScheduler.Scheduler;
 
 namespace TaskScheduler
 {
@@ -36,6 +37,7 @@ namespace TaskScheduler
         private readonly Action<JobContext> onJobStarted;
         private readonly Action<JobContext, JobContext> onJobWait;
         private readonly Action<JobContext, Resource> onResourceWanted;
+        private readonly Action<JobContext, Resource> onResourceReleased;
         //WAS INIT
         internal int Priority { get; set; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
@@ -63,6 +65,7 @@ namespace TaskScheduler
             Action<JobContext> onJobStarted,
             Action<JobContext, JobContext> onJobWait,
             Action<JobContext, Resource> onResourceWanted,
+            Action<JobContext, Resource> onResourceReleased,
             bool isSeparate)
         {
             this.userJob = userJob;
@@ -90,6 +93,7 @@ namespace TaskScheduler
             this.onJobStarted = onJobStarted;
             this.onJobWait = onJobWait;
             this.onResourceWanted = onResourceWanted;
+            this.onResourceReleased = onResourceReleased;
             StartTime = startTime;
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
@@ -152,7 +156,8 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                         break;
                     case JobState.Running:
-                        throw new InvalidOperationException("Job already started");
+                        break;  //TESTING PURPOSES
+                        //throw new InvalidOperationException("Job already started");
                     case JobState.Finished:
                         throw new InvalidOperationException("Job already finished");
                     case JobState.WaitingToResume:
@@ -637,6 +642,39 @@ namespace TaskScheduler
             }
         }
 
+        private HashSet<Resource> waitedResources = new();
+        private bool wantsMoreResources = false;
+        internal void RequestResources(HashSet<Resource> resources)
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotScheduled:
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Requesting a resource when not started.");
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        foreach(var resource in resources)
+                        {
+                            waitedResources.Add(resource);
+                        }
+                        wantsMoreResources = true;
+                        break;
+                    case JobState.WaitingToResume:
+                        break;
+                    case JobState.Paused:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+        }
+
         Resource waitedResource = null;
         public void CheckForResourse()
         {
@@ -652,8 +690,21 @@ namespace TaskScheduler
                         //jobState = JobState.Paused;
                         if(!isSeparate && wantsResourse)
                         {
+                            if(Priority == 1)
+                            {
+                                Console.WriteLine("AA");
+                            }
                             wantsResourse = false;
                             onResourceWanted(this, waitedResource);
+                        }
+                        if(!isSeparate && wantsMoreResources)
+                        {
+                            wantsMoreResources = false;
+                            foreach(var element in waitedResources)
+                            {
+                                onResourceWanted(this, element);
+                            }
+                            waitedResources.Clear();
                         }
                         break;
                     case JobState.WaitingToResume:
@@ -674,18 +725,100 @@ namespace TaskScheduler
             }
         }
 
+        public void ReleaseResource(Resource resource)
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotScheduled:
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Requesting release when not possible.");
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        onResourceReleased(this, resource);
+                        break;
+                    case JobState.WaitingToResume:
+                        break;
+                    case JobState.Paused:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+        }
+
+        public void ReleaseResources(HashSet<Resource> resources)
+        {
+            lock (jobContextLock)
+            {
+                switch (jobState)
+                {
+                    case JobState.NotScheduled:
+                    case JobState.NotStarted:
+                        throw new InvalidOperationException("Requesting release when not possible.");
+                    case JobState.RunningWithPauseRequest:
+                    case JobState.Running:
+                        foreach (var r in resources)
+                        {
+                            onResourceReleased(this, r);
+                        }
+                        break;
+                    case JobState.WaitingToResume:
+                        break;
+                    case JobState.Paused:
+                        break;
+                    case JobState.Finished:
+                        throw new InvalidOperationException("Invalid job state.");
+                    case JobState.Stopped:
+                        break;
+                    default:
+                        throw new InvalidOperationException("Invalid job state");
+                }
+            }
+        }
+
         public int GetID()
         {
             return id;
         }
 
-        private int oldPriority = -1;
+        internal int oldPriority = -1;
+        private HashSet<int> priorities = new();
         internal void InversePriority(int newPriority)
         {
             lock(jobContextLock)
-            {
-                oldPriority = Priority;
+            {   if(oldPriority == -1)
+                {
+                    oldPriority = Priority;
+                }
+                //priorities.Push(newPriority);
+                //priorities.Add(newPriority);
                 Priority = newPriority;
+            }
+        }
+
+        internal void ReversePriority()
+        {
+            lock(jobContextLock)
+            {
+                Priority = oldPriority;
+                oldPriority = -1;
+                /*priorities.Remove(whichPriority);
+                if(whichPriority == Priority && priorities.Count != 0)
+                {
+                    Priority = priorities.ElementAt(priorities.Count - 1);
+                }
+                if(priorities.Count == 0)
+                {
+                    Priority = oldPriority;
+                    oldPriority = -1;
+                }*/
+ 
             }
         }
 

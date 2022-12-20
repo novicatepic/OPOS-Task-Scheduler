@@ -14,6 +14,7 @@ namespace TaskScheduler.Scheduler
         protected AbstractQueue jobQueue;
         protected Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
         protected Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
+        protected Dictionary<JobContext, HashSet<Resource>> jobWaitingOnResources = new();
         internal readonly HashSet<JobContext> runningJobs = new();
         private readonly HashSet<Job> jobsWihoutStart = new();
         protected readonly object schedulerLock = new();
@@ -40,8 +41,6 @@ namespace TaskScheduler.Scheduler
             {
                 jobContext.CheckStartTime();
             }
-
-
             return new Job(jobContext);
         }
 
@@ -60,6 +59,7 @@ namespace TaskScheduler.Scheduler
                             onJobStarted: HandleJobStartTime,
                             onJobWait: HandleJobWaiting,
                             onResourceWanted: HandleResourceWanted,
+                            onResourceReleased: HandleResourceReleased,
                             isSeparate: false);
             return jobContext;
         }
@@ -95,6 +95,48 @@ namespace TaskScheduler.Scheduler
 
         //Remove job from running jobs
         //And start a new one if it's there
+
+        internal virtual void HandleResourceReleased(JobContext jobContext, Resource resource)
+        {
+            lock(schedulerLock)
+            {
+                if(resourceMap.ContainsKey(jobContext))
+                {
+                    if (resourceMap[jobContext].Contains(resource))
+                    {
+                        resourceMap[jobContext].Remove(resource);
+                        foreach(var job in jobWaitingOnResources)
+                        {
+                            if(job.Value.Contains(resource))
+                            {
+                                //Job doesn't wait on that resource anymore and that resource can continue to work :)
+                                //But only if he doesn't wait for anything else
+                                job.Value.Remove(resource);
+                                if(job.Value.Count == 0 && runningJobs.Count < MaxConcurrentTasks)
+                                {
+                                    runningJobs.Add(job.Key);
+                                    job.Key.Start();
+                                }
+                                else if(job.Value.Count == 0)
+                                {
+                                    jobQueue.Enqueue(job.Key, job.Key.Priority);
+                                }
+                                whoHoldsResources[jobContext].Remove(job.Key);
+                            }
+                        }
+                    } 
+                    else
+                    {
+                        throw new InvalidOperationException("Can't release a resource which is not held by the job!");
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("Can't release a resource which is not held by the job!");
+                }
+            }
+        }
+
         internal virtual void HandleJobFinished(JobContext jobContext)
         {
             lock (schedulerLock)
@@ -106,17 +148,43 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
+                HashSet<Resource> resources = new();
                 if (resourceMap.ContainsKey(jobContext))
                 {
+                    resources = resourceMap[jobContext];
                     resourceMap.Remove(jobContext);
                 }
                 if (whoHoldsResources.ContainsKey(jobContext))
                 {
-                    HashSet<JobContext> jb = whoHoldsResources[jobContext];
+                    //GET WHICH JOBS TO RELEASE
+                    foreach(var element in jobWaitingOnResources)
+                    {
+                        bool isZero = false;
+                        foreach(var resource in resources)
+                        {
+                            if(element.Value.Contains(resource))
+                            {
+                                element.Value.Remove(resource);
+                                if (element.Value.Count == 0) isZero = true;
+                            }
+                        }
+                        if(isZero && runningJobs.Count < MaxConcurrentTasks)
+                        {
+                            runningJobs.Add(element.Key);
+                            element.Key.Start();
+                        }
+                        else if(isZero)
+                        {
+                            jobQueue.Enqueue(element.Key, element.Key.Priority);
+                        }
+                    }
+                    //foreach(var element in jobWaitingOnResources)
+                    /*HashSet<JobContext> jb = whoHoldsResources[jobContext];
                     foreach (var element in jb)
                     {
+                        
                         element.Start();
-                    }
+                    }*/
 
                     whoHoldsResources.Remove(jobContext);
                 }
@@ -144,13 +212,13 @@ namespace TaskScheduler.Scheduler
         {
             lock (schedulerLock)
             {
-                Console.WriteLine("PRIOR: " + jobContext.Priority);
+                //Console.WriteLine("PRIOR: " + jobContext.Priority);
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
                     runningJobs.Add(dequeuedJobContext);
-                    Console.WriteLine("PRIOR DEQUEUED: " + dequeuedJobContext.Priority);
+                    //Console.WriteLine("PRIOR DEQUEUED: " + dequeuedJobContext.Priority);
                     dequeuedJobContext.Start();
                 }
             }
@@ -260,14 +328,31 @@ namespace TaskScheduler.Scheduler
                 //PREVENT EVENTUAL CYCLE PROBLEMS WTIH cycleFound in if-condition
                 if (someoneHoldingResource && cycleFound == false)
                 {
+                    //Adding next four lines of code so I can remember who is waiting on what
+                    if(!jobWaitingOnResources.ContainsKey(jobContext))
+                    {
+                        jobWaitingOnResources.Add(jobContext, new HashSet<Resource>());
+                    }
+                    jobWaitingOnResources[jobContext].Add(resource);
+                    //Pause the job and lock the semaphore
                     jobContext.SetJobState(JobContext.JobState.Paused);
                     jobContext.shouldWaitForResource = true;
+                    //It's basically not in running jobs anymore
+                    runningJobs.Remove(jobContext);
+                    if(jobQueue.Count() > 0 && runningJobs.Count < MaxConcurrentTasks)
+                    {
+                        JobContext jb = jobQueue.Dequeue();
+                        runningJobs.Add(jb);
+                        jb.Start();
+                    }
+                }
+                else if(cycleFound == true)
+                {
+                    Console.WriteLine("Resource not allowed, deadlock would be caused!");
                 }
             }
         }
 
-
-        //DeadlockDetectionGraph deadlockDetectionGraph = new();
         protected DeadlockDetectionGraph MakeDetectionGraph()
         {
             lock (schedulerLock)

@@ -7,7 +7,7 @@ using TaskScheduler.Queue;
 
 namespace TaskScheduler.Scheduler
 {
-    public class PrioritySchedulerPreemptionSlicing : AbstractScheduler, IPreemption, ISlicer
+    public class PrioritySchedulerPreemptionSlicing : PreemptiveScheduler, ISlicer
     {
 
         public PrioritySchedulerPreemptionSlicing()
@@ -34,25 +34,6 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        public void CheckPreemption(JobContext jobContext)
-        {
-            jobQueue.Enqueue(jobContext, jobContext.Priority);
-            int maxPriority = -1;
-            int index = -1;
-            for (int i = 0; i < runningJobs.Count; i++)
-            {
-                if (runningJobs.ElementAt(i).Priority > jobContext.Priority && runningJobs.ElementAt(i).Priority > maxPriority)
-                {
-                    maxPriority = runningJobs.ElementAt(i).Priority;
-                    index = i;
-                }
-            }
-            if (index != -1)
-            {
-                runningJobs.ElementAt(index).RequestPriorityStoppage();
-            }
-        }
-
         public void CheckSliceTime()
         {
             Thread helpThread;
@@ -61,7 +42,8 @@ namespace TaskScheduler.Scheduler
                 while (runningJobs.Count > 0 || jobQueue.Count() > 0)
                 {
                     //Optimising so I don't get fault
-                    Thread.Sleep(15);
+                    //WAS 15
+                    Thread.Sleep(500);
                     for (int i = 0; i < runningJobs.Count; i++)
                     {
                         if (runningJobs.Count > 0)

@@ -78,6 +78,21 @@
             jobContext.RequestResource(resource);
         }
 
+        public void RequestResources(HashSet<Resource> resources)
+        {
+            jobContext.RequestResources(resources);
+        }
+
+        public void ReleaseResource(Resource resource)
+        {
+            jobContext.ReleaseResource(resource);
+        }
+
+        public void ReleaseResources(HashSet<Resource> resources)
+        {
+            jobContext.ReleaseResources(resources);
+        }
+
         internal JobContext GetJobContext()
         {
             return jobContext;
