@@ -53,8 +53,6 @@ namespace TaskScheduler.Scheduler
                             if (ms >= runningJobs.ElementAt(i).sliceTime && runningJobs.ElementAt(i).sliced == false)
                             {
                                 Thread.Sleep(50);
-                                //Console.WriteLine("YES!");
-                                //jb.shouldWaitForPriority = true;
                                 if(!(runningJobs.Count == 1 && jobQueue.Count() == 0))
                                 {
                                     if(runningJobs.Count != 0)
@@ -75,7 +73,6 @@ namespace TaskScheduler.Scheduler
         {
             lock (schedulerLock)
             {
-                Console.WriteLine("PRIORaa: " + jobContext.Priority);
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
@@ -85,14 +82,12 @@ namespace TaskScheduler.Scheduler
                 }
                 if (jobContext.sliced)
                 {
-                    Console.WriteLine("SLICE");
-                    //jobContext.shouldWaitForPriority = false;
                     jobQueue.Enqueue(jobContext, jobContext.Priority);
                 }
             }
         }
 
-        internal override void HandleJobFinished(JobContext jobContext)
+        /*internal override void HandleJobFinished(JobContext jobContext)
         {
 
             lock (schedulerLock)
@@ -105,7 +100,7 @@ namespace TaskScheduler.Scheduler
                     dequeuedJobContext.Start();
                 }
             }
-        }
+        }*/
 
 
     }

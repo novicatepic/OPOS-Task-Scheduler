@@ -13,7 +13,7 @@ namespace TaskScheduler.Scheduler
         public int MaxConcurrentTasks { get; set; } = 1;
         protected AbstractQueue jobQueue;
         protected Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
-        private Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
+        protected Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
         internal readonly HashSet<JobContext> runningJobs = new();
         private readonly HashSet<Job> jobsWihoutStart = new();
         protected readonly object schedulerLock = new();
@@ -103,22 +103,15 @@ namespace TaskScheduler.Scheduler
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
-                    if (dequeuedJobContext.shouldLeave)
-                    {
-                        //dequeuedJobContext.shouldLeave = false;
-                        //dequeuedJobContext.prioritySemaphore.Release();
-                    }
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
-                Console.WriteLine("PRIOR:2 " + jobContext.Priority);
                 if (resourceMap.ContainsKey(jobContext))
                 {
                     resourceMap.Remove(jobContext);
                 }
                 if (whoHoldsResources.ContainsKey(jobContext))
                 {
-                    Console.WriteLine("KNOCK!");
                     HashSet<JobContext> jb = whoHoldsResources[jobContext];
                     foreach (var element in jb)
                     {
@@ -157,6 +150,7 @@ namespace TaskScheduler.Scheduler
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
                     runningJobs.Add(dequeuedJobContext);
+                    Console.WriteLine("PRIOR DEQUEUED: " + dequeuedJobContext.Priority);
                     dequeuedJobContext.Start();
                 }
             }
@@ -207,14 +201,12 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal void HandleResourceWanted(JobContext jobContext, Resource resource)
+        internal virtual void HandleResourceWanted(JobContext jobContext, Resource resource)
         {
-            bool someoneHoldingResource = false;
+
             lock (schedulerLock)
             {
-                Console.WriteLine("ENTERED");
-                //lock(jobContext.jobContextLock)
-                //{
+                bool someoneHoldingResource = false;
                 foreach (var element in resourceMap)
                 {
                     if (element.Value != null && element.Value.Contains(resource))
@@ -225,19 +217,15 @@ namespace TaskScheduler.Scheduler
                 }
                 if (someoneHoldingResource)
                 {
-                    Console.WriteLine("RWAIT");
                     for (int i = 0; i < resourceMap.Count; i++)
                     {
                         if (resourceMap.ElementAt(i).Value.Contains(resource))
                         {
-                            Console.WriteLine("HOLDS");
                             if (!whoHoldsResources.ContainsKey(resourceMap.ElementAt(i).Key))
                             {
-                                //HashSet<JobContext> lmao = new();
                                 whoHoldsResources.Add(resourceMap.ElementAt(i).Key, new HashSet<JobContext>());
                             }
                             whoHoldsResources[resourceMap.ElementAt(i).Key].Add(jobContext);
-                            Console.WriteLine("PRIOR: " + resourceMap.ElementAt(i).Key.Priority);
                             break;
                         }
                     }
@@ -245,7 +233,6 @@ namespace TaskScheduler.Scheduler
                 }
                 else
                 {
-                    Console.WriteLine("RGOTIT");
                     if (!resourceMap.ContainsKey(jobContext))
                     {
                         resourceMap.Add(jobContext, new HashSet<Resource>());
@@ -264,24 +251,24 @@ namespace TaskScheduler.Scheduler
                     }
                 }
 
-                //}
+                DeadlockDetectionGraph graph = MakeDetectionGraph();
+                //Console.WriteLine("Matrix print!");
+                //graph.PrintMatrix();
+
+                bool cycleFound = graph.DFSForCycleCheck(jobContext.GetID());
+
+                //PREVENT EVENTUAL CYCLE PROBLEMS WTIH cycleFound in if-condition
+                if (someoneHoldingResource && cycleFound == false)
+                {
+                    jobContext.SetJobState(JobContext.JobState.Paused);
+                    jobContext.shouldWaitForResource = true;
+                }
             }
-
-            DeadlockDetectionGraph graph = MakeDetectionGraph();
-            graph.PrintMatrix();
-
-            if (someoneHoldingResource)
-            {
-                Console.WriteLine("WAIT!");
-                jobContext.SetJobState(JobContext.JobState.Paused);
-                jobContext.shouldWaitForResource = true;
-            }
-
         }
 
 
         //DeadlockDetectionGraph deadlockDetectionGraph = new();
-        private DeadlockDetectionGraph MakeDetectionGraph()
+        protected DeadlockDetectionGraph MakeDetectionGraph()
         {
             lock (schedulerLock)
             {
@@ -295,39 +282,37 @@ namespace TaskScheduler.Scheduler
                     deadlockDetectionGraph.nodes[i] = runningJobs.ElementAt(i).GetID();
                 }
 
+                //KEEP IT SIMPLE STUPID
                 for (int i = 0; i < graphSize; i++)
                 {
-                    for (int j = 0; j < graphSize; j++)
+                    //for (int j = 0; j < graphSize; j++)
+                    //{
+                    //if (i != j)
+                    //{
+                    if (whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
                     {
-                        if (i != j)
+                        foreach (var element in whoHoldsResources[runningJobs.ElementAt(i)])
                         {
-                            if(whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
-                            {
-                                foreach(var element in whoHoldsResources[runningJobs.ElementAt(i)])
-                                {
-                                    int position = deadlockDetectionGraph.FindPositionOfState(element.GetID());
-                                    deadlockDetectionGraph.ms[i, j] = 1;
-                                }
-                            }
-                            else
-                            {
-                                deadlockDetectionGraph.ms[i, j] = 0;
-                            }
-                        }
-                        else
-                        {
-                            deadlockDetectionGraph.ms[i, j] = 0;
+                            int position = deadlockDetectionGraph.FindPositionOfState(element.GetID());
+                            //Console.WriteLine("ENTERED!");
+                            deadlockDetectionGraph.ms[i, position] = 1;
                         }
                     }
+                    /*else
+                    {
+                        deadlockDetectionGraph.ms[i, j] = 0;
+                    }*/
+                    // }
+                    //else
+                    //{
+                    //    deadlockDetectionGraph.ms[i, j] = 0;
+                    //}
+                    //}
                 }
 
                 return deadlockDetectionGraph;
             }
         }
-
-
-
-        //private void
 
     }
 }

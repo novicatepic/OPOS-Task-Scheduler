@@ -36,7 +36,8 @@ namespace TaskScheduler
         private readonly Action<JobContext> onJobStarted;
         private readonly Action<JobContext, JobContext> onJobWait;
         private readonly Action<JobContext, Resource> onResourceWanted;
-        internal int Priority { get; init; }
+        //WAS INIT
+        internal int Priority { get; set; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
@@ -96,6 +97,7 @@ namespace TaskScheduler
             id = staticId++;
         }
 
+        //SEPARATE PROCESS CONSTRUCTOR
         public JobContext(IUserJob userJob, int priority, DateTime startTime, DateTime finishTime, int maxExecutionTime, bool isSeparate)
         {
             this.userJob = userJob;
@@ -126,18 +128,16 @@ namespace TaskScheduler
         //Start() is either going to start the job
         //Or it's going to resume the job if it was paused before
         //private DateTime timeContinue = new DateTime(2010, 1, 1);
+        private bool firstStart = false;
+        private DateTime pauseFinished = new DateTime(2010, 1, 1);
+        private bool pauseCheck = false;
         internal void Start()
         {
-            //2010, 1, 1 some default date time
-            //if (StartTime == new DateTime(2010, 1, 1))
-            //{
-            //if(!started)
-            //{
-            //    started = true;
+            if(!firstStart)
+            {
                 tempTime = DateTime.Now;
-            //}
+            }
             
-            //}
             lock (jobContextLock)
             {
                 switch (jobState)
@@ -158,27 +158,28 @@ namespace TaskScheduler
                     case JobState.WaitingToResume:
                         jobState = JobState.Running;
                         resumeSemaphore.Release();
-                        //timeContinue = DateTime.Now;
+                        pauseFinished = DateTime.Now;
+                        pauseCheck = true;
                         break;
                     case JobState.Paused:
-                        if(sliced)
+                        jobState = JobState.Running;
+                        if (sliced)
                         {
-                            jobState = JobState.Running;
                             sliced = false;
                             sliceSemaphore.Release();
                         }
                         if(shouldWaitForPriority)
                         {
-                            jobState = JobState.Running;
                             shouldWaitForPriority = false;
                             prioritySemaphore.Release();
                         }
                         if(shouldWaitForResource)
                         {
-                            jobState = JobState.Running;
                             shouldWaitForResource = false; 
                             resourceSemaphore.Release();
                         }
+                        pauseFinished = DateTime.Now;
+                        pauseCheck = true;
                         break;
                     case JobState.Stopped:
                         jobState = JobState.Running;
@@ -400,6 +401,7 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                         jobState = JobState.Paused;
                         shouldPause = true;
+                        pauseStarted = DateTime.Now;
                         if (!isSeparate)
                             onJobPaused(this);
                         break;
@@ -452,8 +454,10 @@ namespace TaskScheduler
 
         //PROBABLY THERE IS A BETTER IMPLEMENTATION, AND THAT IS TO CHECK TIME SOMEWHERE INTERNALLY, THIS IS NOT PRECISE ENOUGH
         private double differenceInMilliseconds = 0;
+        
         public bool CheckExecutionTime()
         {
+            double aggregatedPauseTime = 0;
             //If user didn't set max execution time, we don't really care
             if (MaxExecutionTime == 0)
             {
@@ -461,14 +465,15 @@ namespace TaskScheduler
             }
             //If execution time is longer that specified, it's time to stop
             TimeSpan ts = DateTime.Now - tempTime;
-            TimeSpan ts2 = DateTime.Now - DateTime.Now;
-            /*if(pauseStarted.Year != 2010)
+            //Console.WriteLine("MS DIFFERENCE: " + differenceInMilliseconds);
+            differenceInMilliseconds = ts.TotalMilliseconds;
+            if(pauseCheck)
             {
-                ts2 = timeContinue - pauseStarted;
-                pauseStarted = new DateTime(2010, 1, 1);
-            }*/
-            Console.WriteLine("MS DIFFERENCE: " + differenceInMilliseconds);
-            differenceInMilliseconds = ts.TotalMilliseconds /*- ts2.TotalMilliseconds*/;
+                pauseCheck = false;
+                TimeSpan ts2 = pauseFinished - pauseStarted;
+                aggregatedPauseTime += ts2.TotalMilliseconds;
+            }
+            differenceInMilliseconds -= aggregatedPauseTime;
             //If job worked longer than it should have work
             if (differenceInMilliseconds >= MaxExecutionTime)
             {
@@ -476,11 +481,6 @@ namespace TaskScheduler
             }
             //Else return false
             return false;
-        }
-
-        public bool CheckSliceTime()
-        {
-            throw new NotImplementedException();
         }
 
         public bool CheckFinishTime()
@@ -677,6 +677,16 @@ namespace TaskScheduler
         public int GetID()
         {
             return id;
+        }
+
+        private int oldPriority = -1;
+        internal void InversePriority(int newPriority)
+        {
+            lock(jobContextLock)
+            {
+                oldPriority = Priority;
+                Priority = newPriority;
+            }
         }
 
     }

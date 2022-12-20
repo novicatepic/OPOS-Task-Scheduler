@@ -95,7 +95,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal override void HandleJobFinished(JobContext jobContext)
+        /*internal override void HandleJobFinished(JobContext jobContext)
         {
 
             lock (schedulerLock)
@@ -107,7 +107,8 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
+
             }
-        }
+        }*/
     }
 }

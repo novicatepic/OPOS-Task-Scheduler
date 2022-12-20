@@ -8,9 +8,9 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new FIFOScheduler()
+AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
 {
-    MaxConcurrentTasks = 2,
+    MaxConcurrentTasks = 2
     //jobQueue = new PriorityQueue()
 };
 
@@ -21,14 +21,14 @@ Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 {
     Name = "Job A",
     NumIterations = 100,
-    SleepTime = 500
+    SleepTime = 1000
 })
-{ Priority = 2, StartTime = new DateTime(2022, 12, 12, 7, 45, 30), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)}) ;
+{ Priority = 2, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
 
 Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
-    NumIterations = 100,
+    NumIterations = 5,
     SleepTime = 500
 })
 { Priority = 1 });
@@ -36,7 +36,7 @@ Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job C",
-    NumIterations = 10,
+    NumIterations = 5,
     SleepTime = 500
 })
 { Priority = 3 });
@@ -51,14 +51,23 @@ Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 
 Resource a = new Resource("R1");
 Resource b = new Resource("R2");
+Resource c = new Resource("R3");
+//Resource d = new Resource("R2");
 Thread.Sleep(200);
 jobA.RequestResource(a);
-Thread.Sleep(200);
-jobB.RequestResource(b);
-Thread.Sleep(200);
+//jobA.RequestPause();
+Thread.Sleep(300);
+//jobA.RequestContinue();
+jobB.RequestResource(a);
+//Thread.Sleep(200);
+//jobC.RequestResource(c);
+//Thread.Sleep(200);
+//jobA.RequestResource(b);
+//Thread.Sleep(1000);
+//jobB.RequestResource(c);
+//Thread.Sleep(1000);
+//jobC.RequestResource(a);
 //jobB.RequestResource(a);
-Thread.Sleep(200);
-jobA.RequestResource(b);
 //jobB.RequestResource(a);
 //jobA.RequestResource(b);
 //Thread.Sleep(2000);

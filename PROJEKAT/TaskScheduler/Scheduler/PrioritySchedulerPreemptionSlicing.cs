@@ -95,7 +95,6 @@ namespace TaskScheduler.Scheduler
         {
             lock (schedulerLock)
             {
-                Console.WriteLine("PRIORaa: " + jobContext.Priority);
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
@@ -105,8 +104,6 @@ namespace TaskScheduler.Scheduler
                 }
                 if (jobContext.sliced)
                 {
-                    Console.WriteLine("SLICE");
-                    //jobContext.shouldWaitForPriority = false;
                     jobQueue.Enqueue(jobContext, jobContext.Priority);
                 }
                 if (jobContext.shouldWaitForPriority)
@@ -116,7 +113,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal override void HandleJobFinished(JobContext jobContext)
+        /*internal override void HandleJobFinished(JobContext jobContext)
         {
 
             lock (schedulerLock)
@@ -129,7 +126,7 @@ namespace TaskScheduler.Scheduler
                     dequeuedJobContext.Start();
                 }
             }
-        }
+        }*/
 
     }
 }
