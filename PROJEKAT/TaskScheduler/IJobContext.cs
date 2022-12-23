@@ -28,5 +28,21 @@ namespace TaskScheduler
             }
             return false;
         }
+
+        public void CheckAll()
+        {
+            CheckForPause();
+
+            
+            CheckForStoppage();
+
+            CheckForPriorityStoppage();
+
+            CheckSliceStoppage();
+
+            CheckForResourse();
+
+            
+        }
     }
 }

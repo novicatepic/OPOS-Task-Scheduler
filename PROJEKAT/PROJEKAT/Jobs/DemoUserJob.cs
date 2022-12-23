@@ -5,13 +5,15 @@ using System.Text;
 using System.Threading.Tasks;
 using TaskScheduler;
 
-namespace PROJEKAT
+namespace PROJEKAT.Jobs
 {
     public class DemoUserJob : IUserJob
     {
         //Job has it's name, number of iterations, sleep time...
         //And it implements Run method where we can implement our logic
         public string Name { get; init; } = "DemoUserJob";
+        public int parallelism { get; init; } = 2;
+
         public int NumIterations = 100;
         public int SleepTime = 500;
 
@@ -20,38 +22,40 @@ namespace PROJEKAT
         {
             Console.WriteLine(Name + " started.");
 
-            for(int i = 0; i < NumIterations; i++) 
+            //DOESN'T MAKE SENSE TO DO THIS HERE
+            /*Parallel.For(0, NumIterations, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, i =>
             {
                 Console.WriteLine($"{Name}: {i}");
                 Thread.Sleep(SleepTime);
-                jobApi.CheckForPause();
-                
-                if(jobApi.StoppageConfirmed())
+                //Console.WriteLine($"{Name}: {i}");
+            });*/
+
+            for (int i = 0; i < NumIterations; i++)
+            {
+                Console.WriteLine($"{Name}: {i}");
+                Thread.Sleep(SleepTime);
+                if (jobApi.StoppageConfirmed())
                 {
                     break;
                 }
-                jobApi.CheckForStoppage();
 
-                jobApi.CheckForPriorityStoppage();
+                jobApi.CheckAll();
 
-                jobApi.CheckSliceStoppage();
-
-                jobApi.CheckForResourse();
-
-                if(jobApi.CheckConditions())
+                if (jobApi.CheckConditions())
                 {
                     break;
                 }
             }
 
-            if(!jobApi.StoppageConfirmed())
+            if (!jobApi.StoppageConfirmed())
             {
                 Console.WriteLine($"{Name} finished.");
-            } else
+            }
+            else
             {
                 Console.WriteLine($"{Name} stopped.");
             }
-            
+
         }
     }
 }
