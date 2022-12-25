@@ -150,7 +150,7 @@ namespace PROJEKAT.Jobs
                         //}
                 });
 
-                    Thread.Sleep(SleepTime);
+                    //Thread.Sleep(SleepTime);
 
                     Console.WriteLine($"{Name}: {i}");
 

@@ -1,0 +1,97 @@
+﻿<Window x:Class="GUITs.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GUITs"
+        mc:Ignorable="d"
+        Title="Mayhem" Height="720" Width="1280">
+    <Grid Margin="15,15,15,15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0,90*"/>
+            <RowDefinition Height="0,10*"/>
+        </Grid.RowDefinitions>
+
+        <Button Grid.Row="2" Background="BlueViolet" BorderBrush="Black" BorderThickness="5" HorizontalAlignment="Center" Width="500" FontSize="18" FontFamily="Sans" >Add Task</Button>
+        <Separator></Separator>
+        <Grid Grid.Row="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.66*"></RowDefinition>
+                <RowDefinition Height="0.34*"></RowDefinition>
+            </Grid.RowDefinitions>
+
+            <Expander Grid.Row="1" Header="Waiting jobs" FontSize="18" FontFamily="Sans">
+                <ListView x:Name="WaitingJobs">
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="False">
+                            <GridViewColumn Header="Job name" DisplayMemberBinding="{Binding id}"></GridViewColumn>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+            </Expander>
+
+            
+            <ListView Grid.Row="0" x:Name="RunningJobs">
+                <ListView.View>
+                    <GridView AllowsColumnReorder="False">
+                        <GridViewColumn Header="Job name" DisplayMemberBinding="{Binding id}"></GridViewColumn>
+                        <GridViewColumn Header="Progress">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ProgressBar Name="ProgressBar" Width="Auto" MinWidth="200" Maximum="1.0" Height="12" Value="{Binding Path=Progress, Mode = OneWay}"></ProgressBar>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="Controls">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <!-- Kreiranje metode u code-behindu za obradu događaja Click: Properties > Event handlers for the selected element-->
+                                        <Button IsEnabled="{Binding IsStartable}" Name="StartButton" Click="StartButton_Click" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
+                                            <StackPanel>
+                                                <!-- Resursi moraju imati podešen Build Action: Resource -->
+                                                <Image Source="Resources/play32.png" Width="16" Height="16"></Image>
+                                            </StackPanel>
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="True">
+                                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.5"></Setter>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button IsEnabled="{Binding IsPausableOrResumable}" Name="PauseButton" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
+                                            <StackPanel>
+                                                <Image Source="Resources/pause32.png" Width="16" Height="16"></Image>
+                                            </StackPanel>
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="True">
+                                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.5"></Setter>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            
+        </Grid>
+
+
+    </Grid>
+</Window>

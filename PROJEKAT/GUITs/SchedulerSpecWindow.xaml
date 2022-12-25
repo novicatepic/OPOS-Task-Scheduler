@@ -1,0 +1,49 @@
+﻿<Window x:Class="GUITs.SchedulerSpecWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GUITs"
+        mc:Ignorable="d"
+        Title="SchedulerSpecificationWindow" Height="400" Width="400">
+    <Grid Margin="5, 5, 5, 5">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="0.6*"></RowDefinition>
+            <RowDefinition Height="0.2*"></RowDefinition>
+            <RowDefinition Height="0.2*"></RowDefinition>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <StackPanel>
+                <TextBlock FontSize="14" FontStyle="Italic" FontFamily="Arial">Input algorithm type:</TextBlock>
+                <Separator></Separator>
+                <Separator></Separator>
+                <Separator></Separator>
+
+                <RadioButton x:Name="rb1" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">FIFO</RadioButton>
+                <RadioButton x:Name="rb2" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">RoundRobin</RadioButton>
+                <RadioButton x:Name="rb3" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (no preemption)</RadioButton>
+                <RadioButton x:Name="rb4" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (no preemption + extra slice)</RadioButton>
+                <RadioButton x:Name="rb5" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (preemption)</RadioButton>
+                <RadioButton x:Name="rb6" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (preemption + extra slice)</RadioButton>
+
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1">
+
+            <StackPanel Orientation="Horizontal">
+                <TextBlock FontSize="20">Number of concurrent tasks =  </TextBlock>
+                <Separator Margin="10, 0, 0, 0"></Separator>
+                <TextBox x:Name="parralelismBox" Width="100" Height="27" HorizontalAlignment="Center" VerticalAlignment="Top" Text="?" TextAlignment="Center"></TextBox>
+            </StackPanel>
+            
+        </Grid>
+
+        <Grid Grid.Row="2">
+            <Button x:Name="confirmButton" Click="Button_Click" Background="BlueViolet" BorderBrush="Black" BorderThickness="5" HorizontalAlignment="Center" Width="300" FontSize="18" FontFamily="Sans" >CONFIRM</Button>
+        </Grid>
+
+        </Grid>
+</Window>

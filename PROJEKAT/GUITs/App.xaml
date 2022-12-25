@@ -1,7 +1,7 @@
-﻿<Application x:Class="GUIApp.App"
+﻿<Application x:Class="GUITs.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:GUIApp"
+             xmlns:local="clr-namespace:GUITs"
              StartupUri="JobCreator.xaml">
     <Application.Resources>
          

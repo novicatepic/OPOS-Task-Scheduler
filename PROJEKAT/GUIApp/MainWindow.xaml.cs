@@ -45,7 +45,7 @@ namespace GUIApp
         //FIFO scheduling selected
         private void ComboBoxItem_Selected(object sender, RoutedEventArgs e)
         {
-            taskScheduler = new TaskScheduler.TaskScheduler(fifoflag: true);
+           // taskScheduler = new TaskScheduler.TaskScheduler(fifoflag: true);
             algorithmComboBox.IsEnabled = false;
             createButton.IsEnabled = true;
         }
@@ -53,7 +53,7 @@ namespace GUIApp
         //Priority scheduling selected
         private void ComboBoxItem_Selected_1(object sender, RoutedEventArgs e)
         {
-            taskScheduler = new TaskScheduler.TaskScheduler(fifoflag: false);
+           // taskScheduler = new TaskScheduler.TaskScheduler(fifoflag: false);
             algorithmComboBox.IsEnabled = false;
             createButton.IsEnabled = true;
         }

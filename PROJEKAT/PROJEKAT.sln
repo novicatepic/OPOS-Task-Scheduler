@@ -16,6 +16,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GUIApp", "GUIApp\GUIApp.csp
 		{8213258F-7426-43ED-AC71-EA5C60C52844} = {8213258F-7426-43ED-AC71-EA5C60C52844}
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GUITs", "GUITs\GUITs.csproj", "{2393C77A-486C-4E08-A789-3E334831C755}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -34,6 +36,10 @@ Global
 		{BB733915-5664-4469-8627-E946E06E1507}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB733915-5664-4469-8627-E946E06E1507}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB733915-5664-4469-8627-E946E06E1507}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2393C77A-486C-4E08-A789-3E334831C755}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2393C77A-486C-4E08-A789-3E334831C755}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2393C77A-486C-4E08-A789-3E334831C755}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2393C77A-486C-4E08-A789-3E334831C755}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

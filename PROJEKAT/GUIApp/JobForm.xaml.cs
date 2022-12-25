@@ -194,13 +194,13 @@ namespace GUIApp
             //JobSpecification[] result = new JobSpecification[1];
             startDate = new DateTime(startYear, startMonth, startDay, startHours, startMinutes, startSeconds);
             endDate = new DateTime(endYear, endMonth, endDay, endHours, endMinutes, endSeconds);
-            jobSpecification = new JobSpecification(new DemoUserJob()
+            /*jobSpecification = new JobSpecification(new DemoUserJob()
             {
                 Name = this.jobName,
                 NumIterations = numIterations,
                 SleepTime = sleepTime
             })
-            { Priority = priority, StartTime = startDate, FinishTime = endDate, MaxExecutionTime = maxExecTime };
+            { Priority = priority, StartTime = startDate, FinishTime = endDate, MaxExecutionTime = maxExecTime };*/
             if (GetStartJob())
             {
                 mainWindow.taskScheduler.AddJobWithScheduling(jobSpecification);

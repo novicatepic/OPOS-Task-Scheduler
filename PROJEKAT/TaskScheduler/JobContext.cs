@@ -1,10 +1,12 @@
-﻿using System.Resources;
+﻿using System.ComponentModel;
+using System.Resources;
+using System.Runtime.CompilerServices;
 using TaskScheduler.Scheduler;
 
 namespace TaskScheduler
 {
     //SHOULD BE INTERNAL!!!
-    public class JobContext : IJobContext
+    public class JobContext : IJobContext, INotifyPropertyChanged
     {
         //Concerning job, each job has it's own state
         //Changed to internal
@@ -51,9 +53,41 @@ namespace TaskScheduler
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
 
+        //private string name;
+        //public String Name { get; set; }
+        //public String Name { get; set; } = "JOB";
+
+
+        private double progress;
+        public double Progress
+        {
+            get
+            {
+                return progress;
+            }
+
+            private set
+            {
+                progress = value;
+                NotifyPropertyChanged();
+            }
+        }
+
+
+        public bool IsStartable
+        {
+            get
+            {
+                lock(jobContextLock)
+                {
+                    return jobState == JobState.NotStarted;
+                    //return jobState == (JobState.NotStarted || JobState.NotScheduled);
+                }
+            }
+        }
 
         private static int staticId = 0;
-        private int id = 0;
+        public int id { get; set; }
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
             DateTime finishTime,
@@ -98,7 +132,9 @@ namespace TaskScheduler
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
             this.isSeparate = isSeparate;
-            id = staticId++;
+            id = ++staticId;
+            Progress = 50;
+            //Name = id.ToString();
         }
 
         //SEPARATE PROCESS CONSTRUCTOR
@@ -789,6 +825,13 @@ namespace TaskScheduler
 
         internal int oldPriority = -1;
         private HashSet<int> priorities = new();
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
         internal void InversePriority(int newPriority)
         {
             lock(jobContextLock)
@@ -796,8 +839,6 @@ namespace TaskScheduler
                 {
                     oldPriority = Priority;
                 }
-                //priorities.Push(newPriority);
-                //priorities.Add(newPriority);
                 Priority = newPriority;
             }
         }
