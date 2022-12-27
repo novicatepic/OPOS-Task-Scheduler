@@ -10,34 +10,26 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler.Queue
 {
-    public class FIFOQueue : ObservableCollection<JobContext>, AbstractQueue
+    internal class FIFOQueue : /*ObservableCollection<JobContext>,*/ AbstractQueue
     {
-        protected ObservableHashSet<JobContext> queue = new();
+        //protected ObservableHashSet<JobContext> queue = new();
         //private ObservableQueue<JobContext> queue = new();
 
-        public void Enqueue(JobContext item, int priority)
+        private Queue<JobContext> queue = new();
+
+        internal override void Enqueue(JobContext jobContext, int priority)
         {
-            //queue.
-            //queue.Remove(queue.ElementAt(2));
-            //queue.Add(jobContext);
-            //queue.Enqueue(jobContext);
-            Insert(Items.Count, item);
+            queue.Enqueue(jobContext);
         }
 
-        public JobContext Dequeue()
+        internal override JobContext Dequeue()
         {
-            //return queue.Dequeue();
-            /*JobContext returnJob = queue.ElementAt(0);
-            queue.Remove(queue.ElementAt(0));
-            return returnJob;*/
-            JobContext item = Items[0];
-            RemoveAt(0);
-            return item;
+            return queue.Dequeue();
         }
 
-        public int Count()
+        internal override int Count()
         {
-            return Items.Count;
+            return queue.Count;
         }
     }
 }

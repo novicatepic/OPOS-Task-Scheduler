@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.Resources;
 using System.Runtime.CompilerServices;
 using TaskScheduler.Scheduler;
@@ -29,7 +30,7 @@ namespace TaskScheduler
         internal DateTime StartTime { get; init; }
         internal DateTime FinishTime { get; init; }
         internal int MaxExecutionTime { get; init; }
-        private JobState jobState = JobState.NotStarted;
+        public JobState jobState = JobState.NotStarted;
         private readonly Thread thread;
         internal readonly object jobContextLock = new();
         private readonly Action<JobContext> onJobFinished;
@@ -40,6 +41,7 @@ namespace TaskScheduler
         private readonly Action<JobContext, JobContext> onJobWait;
         private readonly Action<JobContext, Resource> onResourceWanted;
         private readonly Action<JobContext, Resource> onResourceReleased;
+        private readonly Action<JobContext> onJobExecution;
         //WAS INIT
         public int Priority { get; set; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
@@ -53,9 +55,12 @@ namespace TaskScheduler
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
 
-        //private string name;
-        //public String Name { get; set; }
-        //public String Name { get; set; } = "JOB";
+        
+
+
+
+        private static int staticId;
+        public int id { get; set; }
 
 
         private double progress;
@@ -73,31 +78,83 @@ namespace TaskScheduler
             }
         }
 
-
         public bool IsStartable
+        {
+            get
+            {
+                lock (jobContextLock)
+                {
+                    return (jobState == JobState.NotStarted || jobState == JobState.NotScheduled
+                            || jobState == JobState.Paused || jobState == JobState.RunningWithPauseRequest);
+                }
+            }
+        }
+
+        public bool IsCloseable
         {
             get
             {
                 lock(jobContextLock)
                 {
-                    return jobState == JobState.NotStarted;
-                    //return jobState == (JobState.NotStarted || JobState.NotScheduled);
+                    return (jobState == JobState.Finished || jobState == JobState.Stopped);
                 }
             }
         }
 
-        private static int staticId = 0;
-        public int id { get; set; }
+        public bool IsPausable
+        {
+            get
+            {
+                lock(jobContextLock)
+                {
+                    return (jobState == JobState.Running || jobState == JobState.RunningWithPauseRequest);
+                }
+            }
+        }
 
-        /*public void SetFinished()
+        public bool IsStoppable
         {
-            jobState = JobState.Finished;
-            //IZ ISTOG THREADA -> NE MOZE!
-        }*/
-        /*public void CallFinish()
+            get
+            {
+                lock(jobContextLock)
+                {
+                    return (jobState == JobState.WaitingToResume || jobState == JobState.Running || jobState == JobState.RunningWithPauseRequest || jobState == JobState.Paused);
+                }
+                
+            }
+        }
+
+        public JobState State
         {
-            Finish();
+            get => jobState;
+            private set
+            {
+                lock(jobContextLock)
+                {
+                    jobState = value;
+                }
+                
+                NotifyPropertyChanged();
+                NotifyPropertyChanged(nameof(IsStartable));
+                NotifyPropertyChanged(nameof(IsCloseable));
+                NotifyPropertyChanged(nameof(IsStoppable));
+                NotifyPropertyChanged(nameof(IsPausable));
+            }
+        }
+
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        /*public event PropertyChangedEventHandler? PropertyChanged;
+        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }*/
+
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
             DateTime finishTime,
@@ -110,6 +167,7 @@ namespace TaskScheduler
             Action<JobContext, JobContext> onJobWait,
             Action<JobContext, Resource> onResourceWanted,
             Action<JobContext, Resource> onResourceReleased,
+            Action<JobContext> onJobExecution,
             bool isSeparate)
         {
             this.userJob = userJob;
@@ -126,8 +184,6 @@ namespace TaskScheduler
                     {
                         Finish();
                     }
-                    //while(jobState != JobState.Finished) { }
-                    //SetFinished();
                 }
             });
 
@@ -148,8 +204,7 @@ namespace TaskScheduler
             this.isSeparate = isSeparate;
             id = staticId;
             staticId++;
-            //Progress = 50;
-            //Name = id.ToString();
+            this.onJobExecution = onJobExecution;
         }
 
         //SEPARATE PROCESS CONSTRUCTOR
@@ -167,9 +222,6 @@ namespace TaskScheduler
                 {
                     if (!(jobState == JobState.Stopped))
                     {
-                        //Console.WriteLine("YES!");
-                        //while (jobState != JobState.Finished) { }
-                        //SetFinished();
                         Finish();
                     }
                 }
@@ -180,6 +232,8 @@ namespace TaskScheduler
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
             this.isSeparate = isSeparate;
+            id = staticId;
+            staticId++;
         }
 
         //Start() is either going to start the job
@@ -202,7 +256,7 @@ namespace TaskScheduler
                     case JobState.NotScheduled:
                     case JobState.NotStarted:
                         CheckStartTime();
-                        jobState = JobState.Running;
+                        State = JobState.Running;
                         //When job starts, thread is started, and we know what thread does, it causes mayhem :)
                         thread.Start();
                         break;
@@ -214,13 +268,13 @@ namespace TaskScheduler
                     case JobState.Finished:
                         throw new InvalidOperationException("Job already finished");
                     case JobState.WaitingToResume:
-                        jobState = JobState.Running;
+                        State = JobState.Running;
                         resumeSemaphore.Release();
                         pauseFinished = DateTime.Now;
                         pauseCheck = true;
                         break;
                     case JobState.Paused:
-                        jobState = JobState.Running;
+                        State = JobState.Running;
                         if (sliced)
                         {
                             sliced = false;
@@ -240,7 +294,7 @@ namespace TaskScheduler
                         pauseCheck = true;
                         break;
                     case JobState.Stopped:
-                        jobState = JobState.Running;
+                        State = JobState.Running;
                         finishedSemaphore.Release();
                         break;
                     default:
@@ -283,7 +337,6 @@ namespace TaskScheduler
                         
                         break;
                     case JobState.Finished:
-                        //onJobFinished(this); break;
                         throw new InvalidOperationException("Job already finished.");
                     /*case JobState.Stopped:
                         throw new InvalidOperationException("Job stopped.");*/
@@ -353,7 +406,7 @@ namespace TaskScheduler
 
         //When we request pause, we don't go into pause mode straight away
         //But rather we update the state which will later be checked by CheckPause() method
-        internal void RequestPause()
+        public void RequestPause()
         {
             lock (jobContextLock)
             {
@@ -362,9 +415,8 @@ namespace TaskScheduler
                     case JobState.NotStarted:
                         break;
                     case JobState.RunningWithPauseRequest:
-                        break;
                     case JobState.Running:
-                        jobState = JobState.RunningWithPauseRequest;
+                        State = JobState.RunningWithPauseRequest;
                         break;
                     case JobState.Finished:
                         return;
@@ -379,7 +431,7 @@ namespace TaskScheduler
         //If job was paused
         //It only makes sense to wait for resuming, and calls onJobContinueRequested
         //Wouldn't make sense to go into running state because other jobs are being worked on
-        internal void RequestContinue()
+        public void RequestContinue()
         {
             lock (jobContextLock)
             {
@@ -388,17 +440,17 @@ namespace TaskScheduler
                     case JobState.NotStarted:
                         break;
                     case JobState.RunningWithPauseRequest:
-                        jobState = JobState.Running;
+                        State = JobState.Running;
                         break;
                     case JobState.Running:
                         break;
                     case JobState.Paused:
-                        jobState = JobState.WaitingToResume;
+                        State = JobState.WaitingToResume;
                         if (!isSeparate)
                             onJobContinueRequested(this);
                         else
                         {
-                            jobState = JobState.Running;
+                            State = JobState.Running;
                             resumeSemaphore.Release();
                         }
                             
@@ -408,7 +460,7 @@ namespace TaskScheduler
                             onJobContinueRequested(this);
                         break;
                     case JobState.WaitingToResume:
-                        jobState = JobState.WaitingToResume;
+                        State = JobState.WaitingToResume;
                         break;
                     case JobState.Finished:
                         break;
@@ -418,7 +470,7 @@ namespace TaskScheduler
             }
         }
 
-        internal void RequestStop()
+        public void RequestStop()
         {
             lock (jobContextLock)
             {
@@ -432,7 +484,7 @@ namespace TaskScheduler
                     case JobState.Running:
                     case JobState.WaitingToResume:
                     case JobState.Paused:
-                        jobState = JobState.Stopped;
+                        State = JobState.Stopped;
                         jobStopped = true;
                         break;
                     case JobState.Stopped:
@@ -458,7 +510,7 @@ namespace TaskScheduler
                     case JobState.NotStarted:
                         throw new InvalidOperationException("Invalid job state.");
                     case JobState.RunningWithPauseRequest:
-                        jobState = JobState.Paused;
+                        State = JobState.Paused;
                         shouldPause = true;
                         pauseStarted = DateTime.Now;
                         if (!isSeparate)
@@ -582,7 +634,7 @@ namespace TaskScheduler
 
         internal void SetJobState(JobState js)
         {
-            jobState = js;
+            State = js;
         }
 
         internal int GetPriority()
@@ -615,7 +667,7 @@ namespace TaskScheduler
             {
                 if(shouldWaitForPriority)
                 {
-                    jobState = JobState.Paused;
+                    State = JobState.Paused;
                     if(!isSeparate)
                     {
                         onJobPaused(this);
@@ -644,7 +696,7 @@ namespace TaskScheduler
             {
                 if(sliced)
                 {
-                    jobState = JobState.Paused;
+                    State = JobState.Paused;
                     if (!isSeparate)
                     {
                         onJobPaused(this);
@@ -744,10 +796,10 @@ namespace TaskScheduler
                         //jobState = JobState.Paused;
                         if(!isSeparate && wantsResourse)
                         {
-                            if(Priority == 1)
+                            /*if(Priority == 1)
                             {
                                 Console.WriteLine("AA");
-                            }
+                            }*/
                             wantsResourse = false;
                             onResourceWanted(this, waitedResource);
                         }
@@ -836,6 +888,14 @@ namespace TaskScheduler
             }
         }
 
+        public void ExecuteJobManually()
+        {
+            lock(jobContextLock)
+            {
+                onJobExecution(this);
+            }
+        }
+
         public int GetID()
         {
             return id;
@@ -844,11 +904,6 @@ namespace TaskScheduler
         internal int oldPriority = -1;
         private HashSet<int> priorities = new();
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
 
         internal void InversePriority(int newPriority)
         {
@@ -867,19 +922,18 @@ namespace TaskScheduler
             {
                 Priority = oldPriority;
                 oldPriority = -1;
-                /*priorities.Remove(whichPriority);
-                if(whichPriority == Priority && priorities.Count != 0)
-                {
-                    Priority = priorities.ElementAt(priorities.Count - 1);
-                }
-                if(priorities.Count == 0)
-                {
-                    Priority = oldPriority;
-                    oldPriority = -1;
-                }*/
- 
             }
         }
 
+        //private Action<double> onProgressMade;
+        /*internal void SetProgressHandler(Action<double> action)
+        {
+            onProgressMade = action;
+        }*/
+
+        public void SetProgress(double progress)
+        {
+            Progress = progress;
+        }
     }
 }

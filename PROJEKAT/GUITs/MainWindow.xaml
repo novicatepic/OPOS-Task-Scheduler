@@ -20,12 +20,12 @@
         <Separator Grid.ColumnSpan="2" Margin="0,2,0,2"></Separator>
         <Grid Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,67" Grid.RowSpan="2">
             <Grid.RowDefinitions>
-                <RowDefinition Height="0.5*"></RowDefinition>
-                <RowDefinition Height="0.25*"></RowDefinition>
-                <RowDefinition Height="0.25*"></RowDefinition>
+                <RowDefinition Height="1*"></RowDefinition>
+                <!--RowDefinition Height="0.25*"></RowDefinition>
+                <RowDefinition Height="0.25*"></RowDefinition-->
             </Grid.RowDefinitions>
 
-            <Expander Grid.Row="1" Header="Waiting jobs" FontSize="18" FontFamily="Sans">
+            <!--Expander Grid.Row="1" Header="Waiting jobs" FontSize="18" FontFamily="Sans">
                 <ListView x:Name="WaitingJobs">
                     <ListView.View>
                         <GridView AllowsColumnReorder="False">
@@ -43,13 +43,14 @@
                         </GridView>
                     </ListView.View>
                 </ListView>
-            </Expander>
+            </Expander-->
 
 
             <ListView Grid.Row="0" x:Name="RunningJobs">
                 <ListView.View>
                     <GridView AllowsColumnReorder="False">
                         <GridViewColumn Header="Job ID" DisplayMemberBinding="{Binding id}"></GridViewColumn>
+                        
                         <GridViewColumn Header="Progress">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
@@ -80,7 +81,7 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Name="PauseButton" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
+                                        <Button IsEnabled="{Binding IsPausable}" Name="PauseButton"  Click="PauseButton_Click" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
                                             <StackPanel>
                                                 <Image Source="Resources/pause32.png" Width="16" Height="16"></Image>
                                             </StackPanel>
@@ -97,9 +98,26 @@
                                                 </Style>
                                             </Button.Style>
                                         </Button>
-                                        <Button Name="StopButton" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
+                                        <Button IsEnabled="{Binding IsStoppable}" Name="StopButton" Click="StopButton_Click" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
                                             <StackPanel>
                                                 <Image Source="Resources/stop32.png" Width="16" Height="16"></Image>
+                                            </StackPanel>
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsEnabled" Value="True">
+                                                            <Setter Property="Opacity" Value="1.0"></Setter>
+                                                        </Trigger>
+                                                        <Trigger Property="IsEnabled" Value="False">
+                                                            <Setter Property="Opacity" Value="0.5"></Setter>
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                        <Button IsEnabled="{Binding IsCloseable}" Name="CloseButton"  Click="CloseButton_Click" BorderThickness="0" Background="{x:Null}" Width="24" Height="24">
+                                            <StackPanel>
+                                                <Image Source="Resources/close32.png" Width="16" Height="16"></Image>
                                             </StackPanel>
                                             <Button.Style>
                                                 <Style TargetType="Button">

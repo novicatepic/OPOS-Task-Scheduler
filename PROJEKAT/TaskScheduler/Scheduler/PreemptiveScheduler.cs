@@ -31,7 +31,7 @@ namespace TaskScheduler.Scheduler
                         {
                             if (!rememberPast.ContainsKey(resource))
                             {
-                                Console.WriteLine("INVERSED PRIORITY!");
+                                //Console.WriteLine("INVERSED PRIORITY!");
                                 rememberPast.Add(resource, jobContext.Priority);
                                 element.Key.InversePriority(jobContext.Priority);
                                 CheckPreemption(element.Key);
@@ -39,7 +39,7 @@ namespace TaskScheduler.Scheduler
 
                             else if (rememberPast.ContainsKey(resource) && rememberPast[resource] > jobContext.Priority)
                             {
-                                Console.WriteLine("ELSE");
+                                //Console.WriteLine("ELSE");
                                 rememberPast[resource] = jobContext.Priority;
                                 element.Key.InversePriority(jobContext.Priority);
                                 CheckPreemption(element.Key);

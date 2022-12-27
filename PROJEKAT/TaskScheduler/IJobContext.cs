@@ -45,5 +45,7 @@ namespace TaskScheduler
             CheckForResourse();
             
         }
+
+        public abstract void SetProgress(double progress);
     }
 }

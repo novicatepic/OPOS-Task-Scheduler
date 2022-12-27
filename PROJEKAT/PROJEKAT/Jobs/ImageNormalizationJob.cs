@@ -14,29 +14,18 @@ namespace PROJEKAT.Jobs
     {
         public String Name { get; init; } = "Image";
         public int parallelism { get; init; } = 2;
-
-        private string pathAttr;
-        private string[] filePaths;
-        private string output_Path = "Images/OutputImages/";
         private const float MIN_BRIGHTNESS = 0;
         private const float MAX_BRIGHTNESS = 1;
-        private int NumIterations = 3;
-        public int SleepTime = 500;
+        public int SleepTime { get; init; } = 500;
+        public List<(string, string)> PathTupple { get; init; } = new();
 
         private string[] inputPaths;
         private string[] outputPaths;
- 
-        public ImageNormalizationJob(string path)
-        {
-            pathAttr = path;
-            filePaths = Directory.GetFiles(path);
-            //image = (Bitmap)System.Drawing.Image.FromFile("Images/InputImages/cat.jpg");
-        }
 
+        public ImageNormalizationJob() { }
         public ImageNormalizationJob(List<(string, string)> paths)
         {
             inputPaths = new string[paths.Count];
-            //inputPathsSet = new string[paths.Count];
             outputPaths = new string[paths.Count];
             for (int i = 0; i < paths.Count; i++)
             {
@@ -48,60 +37,67 @@ namespace PROJEKAT.Jobs
         void IUserJob.Run(IJobContext jobApi)
         {
             Console.WriteLine(Name + " started.");
-
+            bool breakFromParralel = false;
+            int k = 0;
             for (int i = 0; i < inputPaths.Length; i++)
             {
                 string[] pictures = Directory.GetFiles(inputPaths[i]);
 
                 Parallel.ForEach(pictures, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, picture =>
                 {
-                    Bitmap image = (Bitmap)System.Drawing.Image.FromFile(picture);
-
-                    float minBrightness = MAX_BRIGHTNESS;
-                    float maxBrightness = MIN_BRIGHTNESS;
-                    Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
+                    if(breakFromParralel == false)
                     {
-                        for (int y = 0; y < image.Height; y++)
-                        {
-                            float pixelBrightness = image.GetPixel(x, y).GetBrightness();
-                            minBrightness = Math.Min(minBrightness, pixelBrightness);
-                            maxBrightness = Math.Max(maxBrightness, pixelBrightness);
-                        }
-                    });
+                        Bitmap image = (Bitmap)System.Drawing.Image.FromFile(picture);
 
-                    Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
-                    {
-                        for (int y = 0; y < image.Height; y++)
+                        float minBrightness = MAX_BRIGHTNESS;
+                        float maxBrightness = MIN_BRIGHTNESS;
+                        Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
                         {
-                            Color pixelColor = image.GetPixel(x, y);
-                            float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
-                            Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
-                                pixelColor.GetSaturation(), normalizedPixelBrightness);
-                            image.SetPixel(x, y, normalizedPixelColor);
-                        }
-                    });
+                            for (int y = 0; y < image.Height; y++)
+                            {
+                                float pixelBrightness = image.GetPixel(x, y).GetBrightness();
+                                minBrightness = Math.Min(minBrightness, pixelBrightness);
+                                maxBrightness = Math.Max(maxBrightness, pixelBrightness);
+                            }
+                        });
 
-                    string[] splitPic = picture.Split('/');
-                    image.Save(outputPaths[i] + splitPic.ElementAt(splitPic.Length - 1));
+                        Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
+                        {
+                            for (int y = 0; y < image.Height; y++)
+                            {
+                                Color pixelColor = image.GetPixel(x, y);
+                                float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
+                                Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
+                                    pixelColor.GetSaturation(), normalizedPixelBrightness);
+                                image.SetPixel(x, y, normalizedPixelColor);
+                            }
+                        });
+
+                        string[] splitPic = picture.Split('/');
+                        image.Save(outputPaths[i] + splitPic.ElementAt(splitPic.Length - 1));
+
+                        Console.WriteLine($"{Name}: {++k}");
+
+
+
+                        Thread.Sleep(SleepTime);
+
+                        if (jobApi.StoppageConfirmed())
+                        {
+                            breakFromParralel = true;
+                        }
+
+                        jobApi.CheckAll();
+
+                        if (jobApi.CheckConditions())
+                        {
+                            breakFromParralel = true;
+                        }
+                    }
+                    
                 });
 
-                Console.WriteLine($"{Name}: {i}");
-
                 
-
-                Thread.Sleep(SleepTime);
-
-                if (jobApi.StoppageConfirmed())
-                {
-                    break;
-                }
-
-                jobApi.CheckAll();
-
-                if (jobApi.CheckConditions())
-                {
-                    break;
-                }   
             }
 
             if (!jobApi.StoppageConfirmed())
@@ -114,13 +110,6 @@ namespace PROJEKAT.Jobs
             }
 
         }
-
-
-
-
-
-
-
 
         /*void IUserJob.Run(IJobContext jobApi)
         {

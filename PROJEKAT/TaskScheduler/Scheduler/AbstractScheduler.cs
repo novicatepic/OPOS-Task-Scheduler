@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,22 +15,20 @@ namespace TaskScheduler.Scheduler
     public abstract class AbstractScheduler
     {
         public int MaxConcurrentTasks { get; set; } = 1;
-        public AbstractQueue? jobQueue;
-        protected Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
-        protected Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
-        protected Dictionary<JobContext, HashSet<Resource>> jobWaitingOnResources = new();
-        public readonly ObservableHashSet<JobContext> runningJobs = new();
-        public readonly ObservableHashSet<Job> jobsWihoutStart = new();
+        internal AbstractQueue? jobQueue;
+        internal Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
+        internal Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
+        internal Dictionary<JobContext, HashSet<Resource>> jobWaitingOnResources = new();
+        internal readonly HashSet<JobContext> runningJobs = new();
+        public readonly HashSet<Job> jobsWihoutStart = new();
+
         public readonly object schedulerLock = new();
         public static bool isOne = false;
 
-        public AbstractScheduler()
-        {
-            
-        }
+        public ObservableCollection<JobContext> guiJobs = new();
 
         private Job Schedule(JobSpecification jobSpecification)
-        {
+        { 
             //Want to disable wait() callouts when there is one job running => better implementation
             if (MaxConcurrentTasks == 1)
             {
@@ -43,13 +42,19 @@ namespace TaskScheduler.Scheduler
             //Or put in in waiting queue
             if (jobSpecification.StartTime < DateTime.Now)
             {
+                lock(schedulerLock)
+                {
+                    guiJobs.Add(jobContext);
+                }
                 ScheduleJob(jobContext);
             }
             else
             {
                 jobContext.CheckStartTime();
             }
-            return new Job(jobContext);
+
+            Job job = new Job(jobContext);
+            return job;
         }
 
         private JobContext CreateJobContext(JobSpecification jobSpecification)
@@ -68,6 +73,7 @@ namespace TaskScheduler.Scheduler
                             onJobWait: HandleJobWaiting,
                             onResourceWanted: HandleResourceWanted,
                             onResourceReleased: HandleResourceReleased,
+                            onJobExecution: HandleJobExecution,
                             isSeparate: false);
             return jobContext;
         }
@@ -85,6 +91,14 @@ namespace TaskScheduler.Scheduler
 
             Job job = new Job(jobContext);
             jobsWihoutStart.Add(job);
+
+            lock(schedulerLock)
+            {
+                if (!guiJobs.Contains(jobContext))
+                {
+                    guiJobs.Add(jobContext);
+                }
+            }
 
             return job;
         }
@@ -145,20 +159,11 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        public virtual void HandleJobFinished(JobContext jobContext)
+        internal virtual void HandleJobFinished(JobContext jobContext)
         {
-            //var uiContext = SynchronizationContext.Current;
-            //runningJobs.Remove(jobContext);
             lock (schedulerLock)
             {
-                /*Dispatcher.Invoke((Action)delegate // <--- HERE
-                {
-                    runningJobs.Remove(jobContext);
-                });*/
-                
-#pragma warning disable CS8602 // Dereference of a possibly null reference.
-                //uiContext.Send(x => runningJobs.Remove(jobContext), null);
-#pragma warning restore CS8602 // Dereference of a possibly null reference.
+                jobContext.jobState = JobContext.JobState.Finished;
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
@@ -166,7 +171,7 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
-                /*HashSet<Resource> resources = new();
+                HashSet<Resource> resources = new();
                 if (resourceMap.ContainsKey(jobContext))
                 {
                     resources = resourceMap[jobContext];
@@ -198,7 +203,7 @@ namespace TaskScheduler.Scheduler
                     }
 
                     whoHoldsResources.Remove(jobContext);
-                }*/
+                }
             }
         }
 
@@ -273,6 +278,15 @@ namespace TaskScheduler.Scheduler
         }
 
         internal void HandleJobStartTime(JobContext jobContext)
+        {
+            lock (schedulerLock)
+            {
+                ScheduleJob(jobContext);
+            }
+        }
+
+        //TODO: Make it work with Schedule(jobSpecification)
+        internal void HandleJobExecution(JobContext jobContext)
         {
             lock (schedulerLock)
             {
@@ -381,10 +395,6 @@ namespace TaskScheduler.Scheduler
                 //KEEP IT SIMPLE STUPID
                 for (int i = 0; i < graphSize; i++)
                 {
-                    //for (int j = 0; j < graphSize; j++)
-                    //{
-                    //if (i != j)
-                    //{
                     if (whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
                     {
                         foreach (var element in whoHoldsResources[runningJobs.ElementAt(i)])
@@ -394,16 +404,6 @@ namespace TaskScheduler.Scheduler
                             deadlockDetectionGraph.ms[i, position] = 1;
                         }
                     }
-                    /*else
-                    {
-                        deadlockDetectionGraph.ms[i, j] = 0;
-                    }*/
-                    // }
-                    //else
-                    //{
-                    //    deadlockDetectionGraph.ms[i, j] = 0;
-                    //}
-                    //}
                 }
 
                 return deadlockDetectionGraph;

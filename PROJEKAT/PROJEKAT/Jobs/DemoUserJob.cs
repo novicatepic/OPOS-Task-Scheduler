@@ -12,32 +12,24 @@ namespace PROJEKAT.Jobs
         //Job has it's name, number of iterations, sleep time...
         //And it implements Run method where we can implement our logic
         public string Name { get; init; } = "DemoUserJob";
-        public int parallelism { get; init; } = 2;
 
-        public int NumIterations = 3;
-        public int SleepTime = 500;
+        public int NumIterations { get; init; } = 3;
+        public int SleepTime { get; init; } = 500;
+
+        public DemoUserJob() { }
 
         //Important note: checking for pause at the end of each iteration
         public void Run(IJobContext jobApi)
         {
             Console.WriteLine(Name + " started.");
 
-            //DOESN'T MAKE SENSE TO DO THIS HERE
-            /*Parallel.For(0, NumIterations, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, i =>
+            for (int i = 1; i <= NumIterations; i++)
             {
                 Console.WriteLine($"{Name}: {i}");
-                Thread.Sleep(SleepTime);
-                //Console.WriteLine($"{Name}: {i}");
-            });*/
 
-            /*Task.Run(async () =>
-            {
+                double progress = (double)i / (double)NumIterations;
+                jobApi.SetProgress(progress);
 
-            });*/
-
-            for (int i = 0; i < NumIterations; i++)
-            {
-                Console.WriteLine($"{Name}: {i}");
                 Thread.Sleep(SleepTime);
                 if (jobApi.StoppageConfirmed())
                 {
@@ -51,9 +43,6 @@ namespace PROJEKAT.Jobs
                     break;
                 }
             }
-
-            /*jobApi.SetFinished();
-            jobApi.CallFinish();*/
 
             if (!jobApi.StoppageConfirmed())
             {

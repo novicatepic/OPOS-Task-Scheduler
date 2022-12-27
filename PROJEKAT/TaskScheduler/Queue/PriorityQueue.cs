@@ -9,15 +9,11 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler.Queue
 {
-    public class PriorityQueue : ObservableCollection<JobContext>, AbstractQueue
+    internal class PriorityQueue : AbstractQueue
     {
-        //private PriorityQueue<JobContext, int> queue = new();
-        //private int priority;
-        public PriorityQueue()
-        {
-        }
+        private PriorityQueue<JobContext, int> queue = new();
 
-        /*internal override void Enqueue(JobContext jobContext, int priority)
+        internal override void Enqueue(JobContext jobContext, int priority)
         {
             queue.Enqueue(jobContext, priority);
         }
@@ -25,7 +21,12 @@ namespace TaskScheduler.Queue
         internal override JobContext Dequeue()
         {
             return queue.Dequeue();
-        }*/
+        }
+
+        internal override int Count()
+        {
+            return queue.Count;
+        }
 
         /*private readonly Comparison<JobContext> comparison;
 
@@ -42,7 +43,7 @@ namespace TaskScheduler.Queue
             Insert(index, item);
         }*/
 
-        public void Enqueue(JobContext item, int priority)
+        /*public void Enqueue(JobContext item, int priority)
         {
             int index = Items.TakeWhile(x => CompareInts(x.Priority, item.Priority) < 0).Count();
             Insert(index, item);
@@ -63,7 +64,7 @@ namespace TaskScheduler.Queue
         public int Count()
         {
             return Items.Count;
-        }
+        }*/
 
         /*public void Enqueue(JobContext jobContext, int priority)
         {

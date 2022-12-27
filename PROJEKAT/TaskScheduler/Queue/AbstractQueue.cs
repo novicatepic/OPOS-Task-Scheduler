@@ -9,13 +9,13 @@ using TaskScheduler.Scheduler;
 
 namespace TaskScheduler.Queue
 {
-    public interface AbstractQueue
+    internal abstract class AbstractQueue
     {
         //protected ObservableHashSet<JobContext> queue = new();
-        public void Enqueue(JobContext jobContext, int priority);
-        public JobContext Dequeue();
+        internal abstract void Enqueue(JobContext jobContext, int priority);
+        internal abstract JobContext Dequeue();
 
-        public int Count();
+        internal abstract int Count();
 
     }
 }

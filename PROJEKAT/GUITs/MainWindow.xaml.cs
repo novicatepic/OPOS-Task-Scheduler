@@ -31,25 +31,10 @@ namespace GUITs
     public partial class MainWindow : Window
     {
         AbstractScheduler abstractScheduler;
-        //PriorityQueue queue2 = new();
         public MainWindow(string algorithm, int numOfConcurrentTasks)
         {
-            InitializeComponent();
-
-            ObservableCollection<JobContext> collection = new();
-            ObservableCollection<JobContext> collection2 = new();
-            ObservableCollection<JobContext> collection3 = new();
-
-            //PriorityQueue queue2 = new PriorityQueue();
-            JobContext job = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-
+            InitializeComponent();       
             
-
-            HashSet<JobContext> jobs2 = new();
-
-
-            
-
 
             switch(algorithm)
             {
@@ -75,68 +60,59 @@ namespace GUITs
                     throw new Exception("EXCEPTION!");
             }
 
-            BindingOperations.EnableCollectionSynchronization(abstractScheduler.runningJobs, abstractScheduler.schedulerLock);
-            BindingOperations.EnableCollectionSynchronization((FIFOQueue)abstractScheduler.jobQueue, abstractScheduler.schedulerLock);
-            RunningJobs.ItemsSource = abstractScheduler.runningJobs;
-            WaitingJobs.ItemsSource = (FIFOQueue)abstractScheduler.jobQueue;
+            RunningJobs.ItemsSource = abstractScheduler.guiJobs;
 
-            /*Dispatcher.BeginInvoke(delegate // <--- HERE
-            {
-                await Task.Delay(500);
-                abstractScheduler.runningJobs.Add(job);
-            });*/
-
-           
-
-            Dispatcher.BeginInvoke(async () =>
-            {
-                abstractScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()));
-                //var uiContext = SynchronizationContext.Current;
-                //uiContext.Send(x => abstractScheduler.HandleJobFinished(job), null);
-                abstractScheduler.runningJobs.Add(job);
-                job.Priority = 4;
-                await Task.Delay(1000);
-                
-                JobContext jo2 = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-                abstractScheduler.runningJobs.Add(jo2);
-                job.Priority = 2;
-                await Task.Delay(1000);
-                JobContext jo3 = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-                abstractScheduler.runningJobs.Add(jo3);
-                job.Priority = 1;
-                await Task.Delay(1000);
-                JobContext jo4 = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-                abstractScheduler.runningJobs.Add(jo4);
-                await Task.Delay(1000);
-                //queue2.Add(job);
-                //job.Progress = 50;
-                await Task.Delay(1000);
-                //queue2.Add(new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false));
-            });
-            //abstractScheduler.runningJobs.Remove(job);
-            Dispatcher.BeginInvoke(async () =>
-            {
-                await Task.Delay(1000);
-                abstractScheduler.jobQueue.Enqueue(job, 0);
-                await Task.Delay(1000);
-                JobContext jo3 = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-                abstractScheduler.jobQueue.Enqueue(jo3, 0);
-                await Task.Delay(1000);
-                JobContext jo4 = new JobContext(new DemoUserJob(), 5, DateTime.Now, DateTime.Now, 0, false);
-                abstractScheduler.jobQueue.Enqueue(jo4, 0);
-            });
-
-        }
-
-        private void StartButton_Click(object sender, RoutedEventArgs e)
-        {
-            //queue2.ElementAt(0)
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             JobCreator jobCreator = new(abstractScheduler);
             jobCreator.Show();
+        }
+
+        private void StartButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(sender is Button button)
+            {
+                JobContext job = (JobContext)button.DataContext;
+                if(job.jobState == JobContext.JobState.Paused)
+                {
+                    job.RequestContinue();
+                }
+                else
+                {
+                    job.ExecuteJobManually();
+                }
+                
+            }
+        }
+
+
+        private void PauseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(sender is Button button)
+            {
+                JobContext job = (JobContext)button.DataContext;
+                job.RequestPause();
+            }
+        }
+
+        private void StopButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(sender is Button button)
+            {
+                JobContext job = (JobContext)button.DataContext;
+                job.RequestStop();
+            }
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
+            if(sender is Button button)
+            {
+                JobContext job = (JobContext)button.DataContext;
+                abstractScheduler.guiJobs.Remove(job);
+            }
         }
     }
 }

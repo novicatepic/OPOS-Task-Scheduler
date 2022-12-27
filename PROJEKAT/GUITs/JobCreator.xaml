@@ -56,13 +56,18 @@
                 <RowDefinition Height="0.7*"></RowDefinition>
             </Grid.RowDefinitions>
 
-            <ListView x:Name="existingJobs" Grid.Row="0">
-                <ListView.View>
+            <!--ListBox x:Name="existingJobs" Grid.Row="0">
+                
+                <ListBox.View>
                     <GridView>
                             <GridViewColumn Header="Job name"></GridViewColumn>
                     </GridView>
-                </ListView.View>
-            </ListView>
+                </ListBox.View>
+            </ListBox-->
+            <ListBox x:Name="JobTypeListBox" MinWidth="400" ScrollViewer.VerticalScrollBarVisibility="Auto" FontWeight="Bold" MinHeight="25.96" SelectionChanged="JobTypeListBox_SelectionChanged"></ListBox>
+            <!--StackPanel Orientation="Horizontal">
+                <ListBox x:Name="JobTypeListBox" MinWidth="400" ScrollViewer.VerticalScrollBarVisibility="Auto" FontWeight="Bold" MinHeight="25.96" SelectionChanged="JobTypeListBox_SelectionChanged"></ListBox>
+            </StackPanel-->
 
             <TextBox x:Name="JsonTextBox" Grid.Row="1"></TextBox>
         </Grid>

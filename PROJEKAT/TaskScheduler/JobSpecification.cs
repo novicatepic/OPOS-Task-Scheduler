@@ -10,12 +10,15 @@ namespace TaskScheduler
     //IJobContext checks for pause
     public class JobSpecification
     {
-        internal IUserJob UserJob { get; }
-        public int Priority { get; init; } = 0;
+        public IUserJob UserJob { get; set; }
+        public int Priority { get; set; } = 0;
         public DateTime StartTime { get; set; } = new DateTime(2010, 01, 01);       //Time specifying when the job will be started
         public int MaxExecutionTime{ get; set; } = 0;      //Max time for the exectuion of a job, max execution time
         public DateTime FinishTime { get; set; } = new DateTime(2010, 01, 01);       //Time specifying when the job will be finished or stopped
         //public Boolean IsSeparate { get; set; } = false;
+
+        public JobSpecification() { }
+
         public JobSpecification(IUserJob userJob)
         {
             UserJob = userJob;
