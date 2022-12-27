@@ -1,17 +1,21 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TaskScheduler.Scheduler;
 
 namespace TaskScheduler.Queue
 {
-    abstract public class AbstractQueue
+    public interface AbstractQueue
     {
-        abstract internal void Enqueue(JobContext jobContext, int priority);
-        abstract internal JobContext Dequeue();
+        //protected ObservableHashSet<JobContext> queue = new();
+        public void Enqueue(JobContext jobContext, int priority);
+        public JobContext Dequeue();
 
-        abstract internal int Count();
+        public int Count();
+
     }
 }

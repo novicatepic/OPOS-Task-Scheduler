@@ -35,7 +35,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal override void HandleJobFinished(JobContext jobContext)
+        public override void HandleJobFinished(JobContext jobContext)
         {
             
             lock (schedulerLock)

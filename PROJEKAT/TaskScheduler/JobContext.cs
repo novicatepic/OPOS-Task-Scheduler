@@ -41,7 +41,7 @@ namespace TaskScheduler
         private readonly Action<JobContext, Resource> onResourceWanted;
         private readonly Action<JobContext, Resource> onResourceReleased;
         //WAS INIT
-        internal int Priority { get; set; }
+        public int Priority { get; set; }
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
@@ -88,6 +88,16 @@ namespace TaskScheduler
 
         private static int staticId = 0;
         public int id { get; set; }
+
+        /*public void SetFinished()
+        {
+            jobState = JobState.Finished;
+            //IZ ISTOG THREADA -> NE MOZE!
+        }*/
+        /*public void CallFinish()
+        {
+            Finish();
+        }*/
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
             DateTime finishTime,
@@ -116,8 +126,12 @@ namespace TaskScheduler
                     {
                         Finish();
                     }
+                    //while(jobState != JobState.Finished) { }
+                    //SetFinished();
                 }
             });
+
+            
 
             Priority = priority;
             this.onJobFinished = onJobFinished;
@@ -132,8 +146,9 @@ namespace TaskScheduler
             FinishTime = finishTime;
             MaxExecutionTime = maxExecutionTime;
             this.isSeparate = isSeparate;
-            id = ++staticId;
-            Progress = 50;
+            id = staticId;
+            staticId++;
+            //Progress = 50;
             //Name = id.ToString();
         }
 
@@ -153,6 +168,8 @@ namespace TaskScheduler
                     if (!(jobState == JobState.Stopped))
                     {
                         //Console.WriteLine("YES!");
+                        //while (jobState != JobState.Finished) { }
+                        //SetFinished();
                         Finish();
                     }
                 }
@@ -266,6 +283,7 @@ namespace TaskScheduler
                         
                         break;
                     case JobState.Finished:
+                        //onJobFinished(this); break;
                         throw new InvalidOperationException("Job already finished.");
                     /*case JobState.Stopped:
                         throw new InvalidOperationException("Job stopped.");*/

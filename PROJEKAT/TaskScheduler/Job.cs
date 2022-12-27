@@ -5,11 +5,13 @@
         //Public Class Job is going to use JobContext methods
         //So user doesn't know what is really happening
 
-        private readonly JobContext jobContext;
+        public readonly JobContext jobContext;
         private bool isSeparate = false;
+        private int id;
 
         internal Job(JobContext jobContext)
         {
+            this.id = jobContext.id;
             this.jobContext = jobContext;
         }
 

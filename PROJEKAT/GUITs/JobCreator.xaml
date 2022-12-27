@@ -44,10 +44,10 @@
             <Separator></Separator>
 
             <TextBlock FontSize="20" Margin="0, 20, 0, 0">Start job:</TextBlock>
-            <RadioButton FontSize="17">Yes</RadioButton>
-            <RadioButton FontSize="17">No</RadioButton>
-            <Button x:Name="confirmButton" FontSize="20" BorderThickness="1" Margin="0, 40, 0, 0" BorderBrush="Aqua">CONFIRM</Button>
-
+            <RadioButton FontSize="17" x:Name="jobStartedRB" IsChecked="True">Yes</RadioButton>
+            <RadioButton FontSize="17" x:Name="jobNotStartedRB">No</RadioButton>
+            <Button x:Name="confirmButton" FontSize="20" BorderThickness="1" Margin="0, 40, 0, 0" BorderBrush="Aqua" Click="confirmButton_Click">CONFIRM</Button>
+            
         </StackPanel>
 
         <Grid Grid.Column="1">

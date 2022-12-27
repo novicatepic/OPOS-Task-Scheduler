@@ -1,28 +1,43 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TaskScheduler.Queue
 {
-    public class FIFOQueue : AbstractQueue
+    public class FIFOQueue : ObservableCollection<JobContext>, AbstractQueue
     {
-        private Queue<JobContext> queue = new();
+        protected ObservableHashSet<JobContext> queue = new();
+        //private ObservableQueue<JobContext> queue = new();
 
-        internal override void Enqueue(JobContext jobContext, int priority)
+        public void Enqueue(JobContext item, int priority)
         {
-            queue.Enqueue(jobContext);
+            //queue.
+            //queue.Remove(queue.ElementAt(2));
+            //queue.Add(jobContext);
+            //queue.Enqueue(jobContext);
+            Insert(Items.Count, item);
         }
 
-        internal override JobContext Dequeue()
+        public JobContext Dequeue()
         {
-            return queue.Dequeue();
+            //return queue.Dequeue();
+            /*JobContext returnJob = queue.ElementAt(0);
+            queue.Remove(queue.ElementAt(0));
+            return returnJob;*/
+            JobContext item = Items[0];
+            RemoveAt(0);
+            return item;
         }
 
-        internal override int Count()
+        public int Count()
         {
-            return queue.Count;
+            return Items.Count;
         }
     }
 }

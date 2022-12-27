@@ -1,7 +1,10 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TaskScheduler.Graph;
 using TaskScheduler.Queue;
@@ -11,14 +14,19 @@ namespace TaskScheduler.Scheduler
     public abstract class AbstractScheduler
     {
         public int MaxConcurrentTasks { get; set; } = 1;
-        protected AbstractQueue jobQueue;
+        public AbstractQueue? jobQueue;
         protected Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
         protected Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
         protected Dictionary<JobContext, HashSet<Resource>> jobWaitingOnResources = new();
-        internal readonly HashSet<JobContext> runningJobs = new();
-        private readonly HashSet<Job> jobsWihoutStart = new();
-        protected readonly object schedulerLock = new();
+        public readonly ObservableHashSet<JobContext> runningJobs = new();
+        public readonly ObservableHashSet<Job> jobsWihoutStart = new();
+        public readonly object schedulerLock = new();
         public static bool isOne = false;
+
+        public AbstractScheduler()
+        {
+            
+        }
 
         private Job Schedule(JobSpecification jobSpecification)
         {
@@ -137,10 +145,20 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal virtual void HandleJobFinished(JobContext jobContext)
+        public virtual void HandleJobFinished(JobContext jobContext)
         {
+            //var uiContext = SynchronizationContext.Current;
+            //runningJobs.Remove(jobContext);
             lock (schedulerLock)
             {
+                /*Dispatcher.Invoke((Action)delegate // <--- HERE
+                {
+                    runningJobs.Remove(jobContext);
+                });*/
+                
+#pragma warning disable CS8602 // Dereference of a possibly null reference.
+                //uiContext.Send(x => runningJobs.Remove(jobContext), null);
+#pragma warning restore CS8602 // Dereference of a possibly null reference.
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
@@ -148,7 +166,7 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
-                HashSet<Resource> resources = new();
+                /*HashSet<Resource> resources = new();
                 if (resourceMap.ContainsKey(jobContext))
                 {
                     resources = resourceMap[jobContext];
@@ -178,16 +196,9 @@ namespace TaskScheduler.Scheduler
                             jobQueue.Enqueue(element.Key, element.Key.Priority);
                         }
                     }
-                    //foreach(var element in jobWaitingOnResources)
-                    /*HashSet<JobContext> jb = whoHoldsResources[jobContext];
-                    foreach (var element in jb)
-                    {
-                        
-                        element.Start();
-                    }*/
 
                     whoHoldsResources.Remove(jobContext);
-                }
+                }*/
             }
         }
 

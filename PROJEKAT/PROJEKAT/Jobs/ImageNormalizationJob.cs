@@ -6,6 +6,7 @@ using System;
 using System.Security.Cryptography;
 using System.Net.Http.Headers;
 using static System.Net.Mime.MediaTypeNames;
+using System.Windows.Forms.VisualStyles;
 
 namespace PROJEKAT.Jobs
 {
@@ -19,40 +20,155 @@ namespace PROJEKAT.Jobs
         private string output_Path = "Images/OutputImages/";
         private const float MIN_BRIGHTNESS = 0;
         private const float MAX_BRIGHTNESS = 1;
-        //private int singlePictureParallelism;
-        public int NumIterations = 3;
+        private int NumIterations = 3;
         public int SleepTime = 500;
 
+        private string[] inputPaths;
+        private string[] outputPaths;
+ 
         public ImageNormalizationJob(string path)
         {
-           // this.singlePictureParallelism = singlePictureParallelism;
             pathAttr = path;
             filePaths = Directory.GetFiles(path);
             //image = (Bitmap)System.Drawing.Image.FromFile("Images/InputImages/cat.jpg");
         }
 
+        public ImageNormalizationJob(List<(string, string)> paths)
+        {
+            inputPaths = new string[paths.Count];
+            //inputPathsSet = new string[paths.Count];
+            outputPaths = new string[paths.Count];
+            for (int i = 0; i < paths.Count; i++)
+            {
+                inputPaths[i] = paths[i].Item1.ToString();
+                outputPaths[i] = paths[i].Item2.ToString();
+            }
+        }
+
         void IUserJob.Run(IJobContext jobApi)
         {
             Console.WriteLine(Name + " started.");
-            //int chunkSize = filePaths.Length / parallelism;
+
+            for (int i = 0; i < inputPaths.Length; i++)
+            {
+                string[] pictures = Directory.GetFiles(inputPaths[i]);
+
+                Parallel.ForEach(pictures, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, picture =>
+                {
+                    Bitmap image = (Bitmap)System.Drawing.Image.FromFile(picture);
+
+                    float minBrightness = MAX_BRIGHTNESS;
+                    float maxBrightness = MIN_BRIGHTNESS;
+                    Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
+                    {
+                        for (int y = 0; y < image.Height; y++)
+                        {
+                            float pixelBrightness = image.GetPixel(x, y).GetBrightness();
+                            minBrightness = Math.Min(minBrightness, pixelBrightness);
+                            maxBrightness = Math.Max(maxBrightness, pixelBrightness);
+                        }
+                    });
+
+                    Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
+                    {
+                        for (int y = 0; y < image.Height; y++)
+                        {
+                            Color pixelColor = image.GetPixel(x, y);
+                            float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
+                            Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
+                                pixelColor.GetSaturation(), normalizedPixelBrightness);
+                            image.SetPixel(x, y, normalizedPixelColor);
+                        }
+                    });
+
+                    string[] splitPic = picture.Split('/');
+                    image.Save(outputPaths[i] + splitPic.ElementAt(splitPic.Length - 1));
+                });
+
+                Console.WriteLine($"{Name}: {i}");
+
+                
+
+                Thread.Sleep(SleepTime);
+
+                if (jobApi.StoppageConfirmed())
+                {
+                    break;
+                }
+
+                jobApi.CheckAll();
+
+                if (jobApi.CheckConditions())
+                {
+                    break;
+                }   
+            }
+
+            if (!jobApi.StoppageConfirmed())
+            {
+                Console.WriteLine($"{Name} finished.");
+            }
+            else
+            {
+                Console.WriteLine($"{Name} stopped.");
+            }
+
+        }
 
 
-            
 
-            if(filePaths.Length == 1)
+
+
+
+
+
+        /*void IUserJob.Run(IJobContext jobApi)
+        {
+            Console.WriteLine(Name + " started.");
+
+            if (filePaths.Length == 1)
             {
                 Bitmap image = (Bitmap)System.Drawing.Image.FromFile(filePaths[0]);
 
                 float minBrightness = MAX_BRIGHTNESS;
                 float maxBrightness = MIN_BRIGHTNESS;
+                //Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
+                //{
+                //int y;
                 Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
                 {
-                    for (int y = 0; y < image.Height; y++)
+                    //for (int x = 0; x < image.Width; x++)
+                    //{
+                    lock (pictureLock)
                     {
-                        float pixelBrightness = image.GetPixel(x, y).GetBrightness();
-                        minBrightness = Math.Min(minBrightness, pixelBrightness);
-                        maxBrightness = Math.Max(maxBrightness, pixelBrightness);
+                        for (int y = 0; y < image.Height; y++)
+                        {
+                            //Console.WriteLine("X = " + x);
+                            //Console.WriteLine("Y = " + y);
+                            float pixelBrightness = image.GetPixel(x, y).GetBrightness();
+                            minBrightness = Math.Min(minBrightness, pixelBrightness);
+                            maxBrightness = Math.Max(maxBrightness, pixelBrightness);
+                        }
                     }
+
+                    //}
+
+                    lock (pictureLock)
+                    {
+                        for (int y = 0; y < image.Height; y++)
+                        {
+                            Color pixelColor = image.GetPixel(x, y);
+                            float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
+                            Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
+                            pixelColor.GetSaturation(), normalizedPixelBrightness);
+                            image.SetPixel(x, y, normalizedPixelColor);
+                        }
+                    }
+
+                });
+
+                /*for(int x = 0; x < image.Width; x++)
+                {
                     for (int y = 0; y < image.Height; y++)
                     {
                         Color pixelColor = image.GetPixel(x, y);
@@ -61,8 +177,10 @@ namespace PROJEKAT.Jobs
                             pixelColor.GetSaturation(), normalizedPixelBrightness);
                         image.SetPixel(x, y, normalizedPixelColor);
                     }
-                    image.Save(output_Path + filePaths[0].Substring(pathAttr.Length));
-                });
+                }
+
+                image.Save(output_Path + filePaths[0].Substring(pathAttr.Length));
+                //});
             }
             else
             {
@@ -96,36 +214,19 @@ namespace PROJEKAT.Jobs
                         k++;
                     }
 
-                    Parallel.ForEach(array, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, filePath => {
+                    Parallel.ForEach(array, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, filePath =>
+                    {
                         Bitmap image = (Bitmap)System.Drawing.Image.FromFile(filePath);
 
                         float minBrightness = MAX_BRIGHTNESS;
                         float maxBrightness = MIN_BRIGHTNESS;
 
-                        /*if(singlePictureParallelism)
-                        {
-                            Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
-                            {
-                                for (int y = 0; y < image.Height; y++)
-                                {
-                                    float pixelBrightness = image.GetPixel(x, y).GetBrightness();
-                                    minBrightness = Math.Min(minBrightness, pixelBrightness);
-                                    maxBrightness = Math.Max(maxBrightness, pixelBrightness);
-                                }
-                                for (int y = 0; y < image.Height; y++)
-                                {
-                                    Color pixelColor = image.GetPixel(x, y);
-                                    float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
-                                    Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
-                                        pixelColor.GetSaturation(), normalizedPixelBrightness);
-                                    image.SetPixel(x, y, normalizedPixelColor);
-                                }
-                                image.Save(output_Path + filePath.Substring(pathAttr.Length));
-                            });
-                        }*/
-                        //else
+
+                        //Parallel.For(0, image.Width, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, x =>
                         //{
-                        for (int x = 0; x < image.Width; x++)
+                            //try
+                            //{
+                            for(int x = 0; x < image.Width; x++)
                         {
                             for (int y = 0; y < image.Height; y++)
                             {
@@ -134,8 +235,12 @@ namespace PROJEKAT.Jobs
                                 maxBrightness = Math.Max(maxBrightness, pixelBrightness);
                             }
                         }
-
-                        for (int x = 0; x < image.Width; x++)
+                                
+                            //}
+                            //catch (Exception e) { }
+                            //try
+                            //{
+                            for(int x = 0; x < image.Width; x++)
                         {
                             for (int y = 0; y < image.Height; y++)
                             {
@@ -146,11 +251,14 @@ namespace PROJEKAT.Jobs
                                 image.SetPixel(x, y, normalizedPixelColor);
                             }
                         }
-                        image.Save(output_Path + filePath.Substring(pathAttr.Length)); 
-                        //}
-                });
+                               
+                            //} catch(Exception e) { }
+                            
 
-                    //Thread.Sleep(SleepTime);
+                        //});
+
+                        image.Save(output_Path + filePath.Substring(pathAttr.Length));
+                    });
 
                     Console.WriteLine($"{Name}: {i}");
 
@@ -168,41 +276,9 @@ namespace PROJEKAT.Jobs
                         break;
                     }
                 }
-            
+
 
             }
-
-            /*Parallel.ForEach(filePaths, new ParallelOptions { MaxDegreeOfParallelism = parallelism}, filePath => {
-                Bitmap image = (Bitmap)Image.FromFile(filePath);
-
-                float minBrightness = MAX_BRIGHTNESS;
-                float maxBrightness = MIN_BRIGHTNESS;
-
-                for (int x = 0; x < image.Width; x++)
-                {
-                    for (int y = 0; y < image.Height; y++)
-                    {
-                        float pixelBrightness = image.GetPixel(x, y).GetBrightness();
-                        minBrightness = Math.Min(minBrightness, pixelBrightness);
-                        maxBrightness = Math.Max(maxBrightness, pixelBrightness);
-                    }
-                }
-
-                for (int x = 0; x < image.Width; x++)
-                {
-                    for (int y = 0; y < image.Height; y++)
-                    {
-                        Color pixelColor = image.GetPixel(x, y);
-                        float normalizedPixelBrightness = (pixelColor.GetBrightness() - minBrightness) / (maxBrightness - minBrightness);
-                        Color normalizedPixelColor = ColorConverter.ColorFromAhsb(pixelColor.A, pixelColor.GetHue(),
-                            pixelColor.GetSaturation(), normalizedPixelBrightness);
-                        image.SetPixel(x, y, normalizedPixelColor);
-                    }
-                }
-                //Console.WriteLine(filePath.Substring(pathAttr.Length));
-                image.Save(output_Path + filePath.Substring(pathAttr.Length));
-
-            });*/
 
             if (!jobApi.StoppageConfirmed())
             {
@@ -212,7 +288,7 @@ namespace PROJEKAT.Jobs
             {
                 Console.WriteLine($"{Name} stopped.");
             }
-        }
+        }*/
 
 
         private class ColorConverter

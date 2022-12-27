@@ -14,7 +14,7 @@ namespace PROJEKAT.Jobs
         public string Name { get; init; } = "DemoUserJob";
         public int parallelism { get; init; } = 2;
 
-        public int NumIterations = 100;
+        public int NumIterations = 3;
         public int SleepTime = 500;
 
         //Important note: checking for pause at the end of each iteration
@@ -28,6 +28,11 @@ namespace PROJEKAT.Jobs
                 Console.WriteLine($"{Name}: {i}");
                 Thread.Sleep(SleepTime);
                 //Console.WriteLine($"{Name}: {i}");
+            });*/
+
+            /*Task.Run(async () =>
+            {
+
             });*/
 
             for (int i = 0; i < NumIterations; i++)
@@ -46,6 +51,9 @@ namespace PROJEKAT.Jobs
                     break;
                 }
             }
+
+            /*jobApi.SetFinished();
+            jobApi.CallFinish();*/
 
             if (!jobApi.StoppageConfirmed())
             {

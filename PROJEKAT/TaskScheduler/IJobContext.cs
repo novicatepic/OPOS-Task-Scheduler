@@ -17,7 +17,9 @@ namespace TaskScheduler
         public void CheckForPriorityStoppage();
 
         public void CheckSliceStoppage();
+        //public void SetFinished();
 
+        //public void CallFinish();
         public void CheckForResourse();
 
         public bool CheckConditions()
@@ -41,7 +43,6 @@ namespace TaskScheduler
             CheckSliceStoppage();
 
             CheckForResourse();
-
             
         }
     }
