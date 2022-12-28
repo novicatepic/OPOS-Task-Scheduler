@@ -163,7 +163,7 @@ namespace TaskScheduler.Scheduler
         {
             lock (schedulerLock)
             {
-                jobContext.jobState = JobContext.JobState.Finished;
+                jobContext.SetJobState(JobContext.JobState.Finished);
                 runningJobs.Remove(jobContext);
                 if (jobQueue.Count() > 0)
                 {
@@ -242,7 +242,7 @@ namespace TaskScheduler.Scheduler
 
         //Either run job instantly if there's space for it 
         //Or put it in queue
-        internal void HandleJobContinueRequested(JobContext jobContext)
+        internal virtual void HandleJobContinueRequested(JobContext jobContext)
         {
             if (jobContext.GetJobState() == JobContext.JobState.Stopped)
             {
@@ -267,7 +267,15 @@ namespace TaskScheduler.Scheduler
         {
             lock (schedulerLock)
             {
-                runningJobs.Remove(jobContext);
+                if(runningJobs.Contains(jobContext))
+                {
+                    runningJobs.Remove(jobContext);
+                }
+                /*else
+                {
+                    
+                }*/
+                
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();

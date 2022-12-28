@@ -50,7 +50,8 @@
                 <ListView.View>
                     <GridView AllowsColumnReorder="False">
                         <GridViewColumn Header="Job ID" DisplayMemberBinding="{Binding id}"></GridViewColumn>
-                        
+                        <GridViewColumn Header="Job priority" DisplayMemberBinding="{Binding Priority}"></GridViewColumn>
+                        <GridViewColumn Header="State" DisplayMemberBinding="{Binding State}" Width="150"></GridViewColumn>
                         <GridViewColumn Header="Progress">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>

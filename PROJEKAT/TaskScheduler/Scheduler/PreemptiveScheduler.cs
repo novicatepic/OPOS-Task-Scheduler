@@ -175,6 +175,8 @@ namespace TaskScheduler.Scheduler
             int index = -1;
             for (int i = 0; i < runningJobs.Count; i++)
             {
+                //POTENTIAL PROBLEM -> BE CAREFUL (WHEN TWO JOBS ARE ADDED NEXT TO EACH OTHER SAME JOB IS GOING TO BE PREEMPTED
+                //THEREFORE, PROBABLY SHOULD HAVE ANOTHER CONDITION IN IF STATEMENT
                 if (runningJobs.ElementAt(i).Priority > jobContext.Priority && runningJobs.ElementAt(i).Priority > maxPriority)
                 {
                     maxPriority = runningJobs.ElementAt(i).Priority;
@@ -184,6 +186,28 @@ namespace TaskScheduler.Scheduler
             if (index != -1)
             {
                 runningJobs.ElementAt(index).RequestPriorityStoppage();
+            }
+        }
+
+        internal override void HandleJobContinueRequested(JobContext jobContext)
+        {
+            if (jobContext.GetJobState() == JobContext.JobState.Stopped)
+            {
+                throw new InvalidOperationException("Can't continue a stopped job!");
+            }
+
+            lock (schedulerLock)
+            {
+                if (runningJobs.Count < MaxConcurrentTasks)
+                {
+                    runningJobs.Add(jobContext);
+                    jobContext.Start();
+                }
+                else
+                {
+                    CheckPreemption(jobContext);
+                    //jobQueue.Enqueue(jobContext, jobContext.Priority);
+                }
             }
         }
     }

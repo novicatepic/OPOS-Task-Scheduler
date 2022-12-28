@@ -30,18 +30,20 @@ namespace PROJEKAT.Jobs
                 double progress = (double)i / (double)NumIterations;
                 jobApi.SetProgress(progress);
 
-                Thread.Sleep(SleepTime);
+                jobApi.CheckAll();
+
                 if (jobApi.StoppageConfirmed())
                 {
                     break;
                 }
 
-                jobApi.CheckAll();
+                
 
                 if (jobApi.CheckConditions())
                 {
                     break;
                 }
+                Thread.Sleep(SleepTime);
             }
 
             if (!jobApi.StoppageConfirmed())

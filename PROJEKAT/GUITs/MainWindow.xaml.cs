@@ -31,7 +31,7 @@ namespace GUITs
     public partial class MainWindow : Window
     {
         AbstractScheduler abstractScheduler;
-        public MainWindow(string algorithm, int numOfConcurrentTasks)
+        public MainWindow(string algorithm, int numOfConcurrentTasks, int sliceTime)
         {
             InitializeComponent();       
             
@@ -42,7 +42,7 @@ namespace GUITs
                     abstractScheduler = new FIFOScheduler() { MaxConcurrentTasks = numOfConcurrentTasks };
                     break;
                 case "RR":
-                    abstractScheduler = new FIFOSchedulerSlicing(2000) { MaxConcurrentTasks = numOfConcurrentTasks };
+                    abstractScheduler = new FIFOSchedulerSlicing(sliceTime) { MaxConcurrentTasks = numOfConcurrentTasks };
                     break;
                 case "NoPreemption":
                     abstractScheduler = new PrioritySchedulerPreemption() { MaxConcurrentTasks = numOfConcurrentTasks };
@@ -61,7 +61,6 @@ namespace GUITs
             }
 
             RunningJobs.ItemsSource = abstractScheduler.guiJobs;
-
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

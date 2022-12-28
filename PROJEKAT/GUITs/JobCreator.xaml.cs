@@ -59,9 +59,11 @@ namespace GUITs
 
         private void confirmButton_Click(object sender, RoutedEventArgs e)
         {
-            int priority = 0, executionTime = 0;
-            Int32.TryParse(jobPriorityBox.ToString(), out priority);
-            Int32.TryParse(maxExecutionTimeBox.ToString(), out executionTime);
+            int priority, executionTime;
+            Int32.TryParse(jobPriorityBox.Text, out priority);
+            Int32.TryParse(maxExecutionTimeBox.Text, out executionTime);
+
+            //MessageBox.Show(priority.ToString());
 
             var tmp = startDateBox.SelectedDate;
             int startYear = tmp.Value.Year;
@@ -70,7 +72,7 @@ namespace GUITs
 
             
 
-            string[] parseStartTime = startTimeBox.ToString().Split('-');
+            string[] parseStartTime = startTimeBox.Text.Split('-');
             if(parseStartTime.Length != 3)
             {
                 throw new InvalidOperationException("Start time not correct!");
@@ -93,7 +95,7 @@ namespace GUITs
             int endMonth = tmp2.Value.Month;
             int endDay = tmp2.Value.Day;
 
-            string[] parseEndTime = endTimeBox.ToString().Split('-');
+            string[] parseEndTime = endTimeBox.Text.Split('-');
             if(parseEndTime.Length != 3)
             {
                 throw new InvalidOperationException("End time not correct!");

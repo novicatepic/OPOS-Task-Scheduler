@@ -12,9 +12,9 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new FIFOScheduler()
+AbstractScheduler taskScheduler = new FIFOSchedulerSlicing(2)
 {
-    MaxConcurrentTasks = 2
+    MaxConcurrentTasks = 1
     //jobQueue = new PriorityQueue()
 };
 
@@ -57,9 +57,15 @@ Resource a = new Resource("R1");
 Resource b = new Resource("R2");
 Resource c = new Resource("R3");
 Thread.Sleep(1000);
-jobA.RequestResource(a);
+Console.WriteLine("PAUSE REQUESTED!");
+//jobB.RequestPause();
+//taskScheduler.ScheduleUnscheduledJob(jobC);
+//Console.WriteLine("STOP REQQ");
+//jobA.RequestStop();
+//Console.WriteLine("STATE: " + jobA.jobContext.State);
+//jobA.RequestResource(a);
 Thread.Sleep(1000);
-jobB.RequestResource(a);
+//jobB.RequestResource(a);
 Thread.Sleep(500);
 Console.WriteLine("RELEASE CALLED!");
 //jobA.ReleaseResource(a);

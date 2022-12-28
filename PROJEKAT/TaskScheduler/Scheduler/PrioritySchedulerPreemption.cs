@@ -40,6 +40,11 @@ namespace TaskScheduler.Scheduler
             
             lock (schedulerLock)
             {
+                if(jobContext.GetJobState() != JobContext.JobState.Stopped)
+                {
+                    jobContext.SetJobState(JobContext.JobState.Finished);
+                }
+                
                 runningJobs.Remove(jobContext);
                 jobContext.ReversePriority();
                 if (jobQueue.Count() > 0)

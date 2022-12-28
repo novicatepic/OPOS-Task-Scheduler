@@ -18,6 +18,8 @@ namespace TaskScheduler
             Running,
             RunningWithPauseRequest,
             WaitingToResume,
+            SlicePaused,
+            PriorityPaused,
             Paused,
             Stopped,
             Finished
@@ -43,7 +45,7 @@ namespace TaskScheduler
         private readonly Action<JobContext, Resource> onResourceReleased;
         private readonly Action<JobContext> onJobExecution;
         //WAS INIT
-        public int Priority { get; set; }
+        
         private static readonly SemaphoreSlim finishedSemaphore = new(0);
         private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
@@ -61,7 +63,7 @@ namespace TaskScheduler
 
         private static int staticId;
         public int id { get; set; }
-
+        public int Priority { get; set; }
 
         private double progress;
         public double Progress
@@ -118,7 +120,9 @@ namespace TaskScheduler
             {
                 lock(jobContextLock)
                 {
-                    return (jobState == JobState.WaitingToResume || jobState == JobState.Running || jobState == JobState.RunningWithPauseRequest || jobState == JobState.Paused);
+                    return (jobState == JobState.WaitingToResume || jobState == JobState.Running ||
+                        jobState == JobState.RunningWithPauseRequest
+                        || jobState == JobState.Paused || jobState == JobState.SlicePaused || jobState == JobState.PriorityPaused);
                 }
                 
             }
@@ -142,18 +146,11 @@ namespace TaskScheduler
             }
         }
 
-
         public event PropertyChangedEventHandler? PropertyChanged;
         private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-
-        /*public event PropertyChangedEventHandler? PropertyChanged;
-        private void NotifyPropertyChanged([CallerMemberName] string propertyName = "")
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }*/
 
         public JobContext(IUserJob userJob, int priority,
             DateTime startTime,
@@ -273,18 +270,34 @@ namespace TaskScheduler
                         pauseFinished = DateTime.Now;
                         pauseCheck = true;
                         break;
-                    case JobState.Paused:
+                    case JobState.PriorityPaused:
+                        State = JobState.Running;
+                        if (shouldWaitForPriority)
+                        {
+                            shouldWaitForPriority = false;
+                            prioritySemaphore.Release();
+                        }
+                        pauseFinished = DateTime.Now;
+                        pauseCheck = true;
+                        break;
+                    case JobState.SlicePaused:
                         State = JobState.Running;
                         if (sliced)
                         {
                             sliced = false;
                             sliceSemaphore.Release();
                         }
-                        if(shouldWaitForPriority)
+                        pauseFinished = DateTime.Now;
+                        pauseCheck = true;
+                        break;
+                    case JobState.Paused:
+                        State = JobState.Running;
+                        
+                        /*if(shouldWaitForPriority)
                         {
                             shouldWaitForPriority = false;
                             prioritySemaphore.Release();
-                        }
+                        }*/
                         if(shouldWaitForResource)
                         {
                             shouldWaitForResource = false; 
@@ -294,8 +307,9 @@ namespace TaskScheduler
                         pauseCheck = true;
                         break;
                     case JobState.Stopped:
-                        State = JobState.Running;
-                        finishedSemaphore.Release();
+                        onJobFinished(this);
+                        //State = JobState.Running;
+                        //finishedSemaphore.Release();
                         break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
@@ -419,6 +433,8 @@ namespace TaskScheduler
                         State = JobState.RunningWithPauseRequest;
                         break;
                     case JobState.Finished:
+                    case JobState.SlicePaused:
+                    case JobState.PriorityPaused:
                         return;
                     case JobState.Paused:
                         break;
@@ -484,8 +500,10 @@ namespace TaskScheduler
                     case JobState.Running:
                     case JobState.WaitingToResume:
                     case JobState.Paused:
+                    case JobState.SlicePaused:
+                    case JobState.PriorityPaused:
                         State = JobState.Stopped;
-                        jobStopped = true;
+                        //jobStopped = true;
                         break;
                     case JobState.Stopped:
                         break;
@@ -519,6 +537,8 @@ namespace TaskScheduler
                     case JobState.Running:
                     case JobState.WaitingToResume:
                     case JobState.Paused:
+                    case JobState.SlicePaused:
+                    case JobState.PriorityPaused:
                         break;
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
@@ -540,6 +560,11 @@ namespace TaskScheduler
         {
             lock (jobContextLock)
             {
+                /*if(Priority == 0)
+                {
+                    Console.WriteLine("CHECKING STOPPAGE: " + jobState);
+                }*/
+                
                 switch (jobState)
                 {
                     case JobState.NotStarted:
@@ -551,8 +576,15 @@ namespace TaskScheduler
                     case JobState.Finished:
                     case JobState.WaitingToResume:
                     case JobState.Paused:
+                    case JobState.SlicePaused:
+                    case JobState.PriorityPaused:
                         break;
+                    //case JobState.SlicePaused:
                     case JobState.Stopped:
+                        /*if(sliced)
+                        {
+                            sliceSemaphore.Release();
+                        }*/
                         //jobState = JobState.Finished;
                         if(!isSeparate)
                             onJobStopped(this);
@@ -649,7 +681,8 @@ namespace TaskScheduler
 
         public bool StoppageConfirmed()
         {
-            return jobStopped;
+            // return jobStopped;
+            return jobState == JobState.Stopped;
         }
 
         internal void RequestPriorityStoppage()
@@ -667,7 +700,8 @@ namespace TaskScheduler
             {
                 if(shouldWaitForPriority)
                 {
-                    State = JobState.Paused;
+                    //Console.WriteLine("PRIORITY STOP!");
+                    State = JobState.PriorityPaused;
                     if(!isSeparate)
                     {
                         onJobPaused(this);
@@ -696,7 +730,8 @@ namespace TaskScheduler
             {
                 if(sliced)
                 {
-                    State = JobState.Paused;
+                    //Console.WriteLine("SLICED!");
+                    State = JobState.SlicePaused;
                     if (!isSeparate)
                     {
                         onJobPaused(this);
@@ -819,6 +854,7 @@ namespace TaskScheduler
                     case JobState.Finished:
                         throw new InvalidOperationException("Invalid job state.");
                     case JobState.Stopped:
+                    case JobState.SlicePaused:
                         break;
                     default:
                         throw new InvalidOperationException("Invalid job state");
@@ -892,7 +928,15 @@ namespace TaskScheduler
         {
             lock(jobContextLock)
             {
-                onJobExecution(this);
+                if(jobState == JobState.NotScheduled)
+                {
+                    onJobExecution(this);
+                }
+                else
+                {
+                    throw new Exception("Wrong job to start");
+                }
+                
             }
         }
 
