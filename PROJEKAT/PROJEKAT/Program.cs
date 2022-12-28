@@ -12,7 +12,7 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new FIFOSchedulerSlicing(2)
+AbstractScheduler taskScheduler = new FIFOScheduler()
 {
     MaxConcurrentTasks = 1
     //jobQueue = new PriorityQueue()
@@ -21,7 +21,7 @@ AbstractScheduler taskScheduler = new FIFOSchedulerSlicing(2)
 //PriorityQueue pq = taskScheduler.jobQueue as  PriorityQueue;
 //pq.SetWithPreemption(true);
 
-Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobA = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
     NumIterations = 10,
@@ -29,7 +29,7 @@ Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 })
 { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
 
-Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
     NumIterations = 10,
@@ -37,7 +37,7 @@ Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 })
 { Priority = 2 });
 
-Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobC = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job C",
     NumIterations = 10,
@@ -45,7 +45,7 @@ Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 })
 { Priority = 1 });
 
-Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+Job jobX = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job X",
     NumIterations =10,
@@ -73,23 +73,27 @@ Console.WriteLine("RELEASE CALLED!");
 //Bitmap image = (Bitmap)System.Drawing.Image.FromFile(path);
 
 
-/*string path = "Images/InputImages/";
+string path = "Images/InputImages/";
 string path2 = "Images/II/";
 Bitmap image = (Bitmap)System.Drawing.Image.FromFile(path + "cat.jpg");
 string outputPath = "Images/OutputImages/";
 string outputPath2 = "Images/OutputImages2/";
 List<(string, string)> tupple = new List<(string, string)>();
 tupple.Add((path, outputPath));
-tupple.Add((path2, outputPath2));
+//tupple.Add((path2, outputPath2));
 
-Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new ImageNormalizationJob(tupple)
+List<string> inputPaths = new();
+inputPaths.Add(path);
+inputPaths.Add(path2);
+
+Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new ImageNormalizationJob(inputPaths, outputPath)
 {
     Name = "Job A",
-    parallelism = 1
+    Parallelism = 3
 })
 { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) }); ;
-Thread.Sleep(2000);
-demoJob.RequestStop();*/
+//Thread.Sleep(2000);
+//demoJob.RequestStop();
 
 
 
