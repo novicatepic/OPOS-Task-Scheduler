@@ -29,70 +29,7 @@ namespace PROJEKAT.Jobs
         {
             this.InputPaths = inputPaths;
             this.OutputPath = outputPath;
-            /*outputPaths = new string[paths.Count];
-            for (int i = 0; i < paths.Count; i++)
-            {
-                inputPaths[i] = paths[i].Item1.ToString();
-                outputPaths[i] = paths[i].Item2.ToString();
-            }*/
         }
-
-        /*public ImageNormalizationJob(List<(string, string)> paths)
-        {
-            inputPaths = new string[paths.Count];
-            outputPaths = new string[paths.Count];
-            for (int i = 0; i < paths.Count; i++)
-            {
-                inputPaths[i] = paths[i].Item1.ToString();
-                outputPaths[i] = paths[i].Item2.ToString();
-            }
-        }*/
-
-        /*void IUserJob.Run(IJobContext jobApi)
-        {
-            Console.WriteLine(Name + " started.");
-            bool breakFromParralel = false;
-            int k = 0;
-            for (int i = 0; i < inputPaths.Length; i++)
-            {
-                string[] pictures = Directory.GetFiles(inputPaths[i]);
-                Parallel.ForEach(pictures, new ParallelOptions { MaxDegreeOfParallelism = Parallelism }, picture =>
-                {
-
-                    if (breakFromParralel == false)
-                    {
-                        Bitmap image = (Bitmap)System.Drawing.Image.FromFile(picture);
-                        float minBrightness = MAX_BRIGHTNESS;
-                        float maxBrightness = MIN_BRIGHTNESS;
-                        HelpMethodForProcessingImage(image, minBrightness, maxBrightness);
-
-                        string[] splitPic = picture.Split('/');
-                        image.Save(outputPaths[i] + splitPic.ElementAt(splitPic.Length - 1));
-
-                        Console.WriteLine($"{Name}: {++k}");
-
-
-
-                        Thread.Sleep(SleepTime);
-
-                        if (jobApi.StoppageConfirmed())
-                        {
-                            breakFromParralel = true;
-                        }
-
-                        jobApi.CheckAll();
-
-                        if (jobApi.CheckConditions())
-                        {
-                            breakFromParralel = true;
-                        }
-                    }
-
-                });
-
-
-            }
-        }*/
 
         object picLock = new();
         private void HelpMethodForProcessingImage(Bitmap image, float minBrightness, float maxBrightness)

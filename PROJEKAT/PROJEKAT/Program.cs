@@ -56,7 +56,7 @@ Job jobX = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 Resource a = new Resource("R1");
 Resource b = new Resource("R2");
 Resource c = new Resource("R3");
-Thread.Sleep(1000);
+//Thread.Sleep(1000);
 Console.WriteLine("PAUSE REQUESTED!");
 //jobB.RequestPause();
 //taskScheduler.ScheduleUnscheduledJob(jobC);
@@ -64,9 +64,9 @@ Console.WriteLine("PAUSE REQUESTED!");
 //jobA.RequestStop();
 //Console.WriteLine("STATE: " + jobA.jobContext.State);
 //jobA.RequestResource(a);
-Thread.Sleep(1000);
+//Thread.Sleep(1000);
 //jobB.RequestResource(a);
-Thread.Sleep(500);
+//Thread.Sleep(500);
 Console.WriteLine("RELEASE CALLED!");
 //jobA.ReleaseResource(a);
 //var path = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
@@ -75,7 +75,7 @@ Console.WriteLine("RELEASE CALLED!");
 
 string path = "Images/InputImages/";
 string path2 = "Images/II/";
-Bitmap image = (Bitmap)System.Drawing.Image.FromFile(path + "cat.jpg");
+//Bitmap image = (Bitmap)System.Drawing.Image.FromFile(path + "cat.jpg");
 string outputPath = "Images/OutputImages/";
 string outputPath2 = "Images/OutputImages2/";
 List<(string, string)> tupple = new List<(string, string)>();
@@ -84,14 +84,15 @@ tupple.Add((path, outputPath));
 
 List<string> inputPaths = new();
 inputPaths.Add(path);
-inputPaths.Add(path2);
+//inputPaths.Add(path2);
 
-Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new ImageNormalizationJob(inputPaths, outputPath)
+Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
 {
     Name = "Job A",
-    Parallelism = 3
+    Parallelism = 1,
+    SingleParralelism = 2
 })
-{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) }); ;
+{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
 //Thread.Sleep(2000);
 //demoJob.RequestStop();
 
