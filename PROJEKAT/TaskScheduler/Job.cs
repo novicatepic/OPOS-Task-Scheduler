@@ -80,27 +80,27 @@ namespace TaskScheduler
             jobContext.Start();
         }
 
-        public void RequestResource(Resource resource)
+        public void RequestResource(ResourceClass resource)
         {
             jobContext.RequestResource(resource);
         }
 
-        public void RequestResources(HashSet<Resource> resources)
+        public void RequestResources(HashSet<ResourceClass> resources)
         {
             jobContext.RequestResources(resources);
         }
 
-        public void ReleaseResource(Resource resource)
+        public void ReleaseResource(ResourceClass resource)
         {
             jobContext.ReleaseResource(resource);
         }
 
-        public void ReleaseResources(HashSet<Resource> resources)
+        public void ReleaseResources(HashSet<ResourceClass> resources)
         {
             jobContext.ReleaseResources(resources);
         }
 
-        internal JobContext GetJobContext()
+        public JobContext GetJobContext()
         {
             return jobContext;
         }

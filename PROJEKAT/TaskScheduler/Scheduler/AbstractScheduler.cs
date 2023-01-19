@@ -16,9 +16,9 @@ namespace TaskScheduler.Scheduler
     {
         public int MaxConcurrentTasks { get; set; } = 1;
         internal AbstractQueue? jobQueue;
-        internal Dictionary<JobContext, HashSet<Resource>> resourceMap = new();
+        public Dictionary<JobContext, HashSet<ResourceClass>> resourceMap = new();
         internal Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
-        internal Dictionary<JobContext, HashSet<Resource>> jobWaitingOnResources = new();
+        internal Dictionary<JobContext, HashSet<ResourceClass>> jobWaitingOnResources = new();
         internal readonly HashSet<JobContext> runningJobs = new();
         public readonly HashSet<Job> jobsWihoutStart = new();
 
@@ -118,7 +118,7 @@ namespace TaskScheduler.Scheduler
         //Remove job from running jobs
         //And start a new one if it's there
 
-        internal virtual void HandleResourceReleased(JobContext jobContext, Resource resource)
+        internal virtual void HandleResourceReleased(JobContext jobContext, ResourceClass resource)
         {
             lock(schedulerLock)
             {
@@ -171,7 +171,7 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
-                HashSet<Resource> resources = new();
+                HashSet<ResourceClass> resources = new();
                 if (resourceMap.ContainsKey(jobContext))
                 {
                     resources = resourceMap[jobContext];
@@ -302,7 +302,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal virtual void HandleResourceWanted(JobContext jobContext, Resource resource)
+        internal virtual void HandleResourceWanted(JobContext jobContext, ResourceClass resource)
         {
 
             lock (schedulerLock)
@@ -336,13 +336,13 @@ namespace TaskScheduler.Scheduler
                 {
                     if (!resourceMap.ContainsKey(jobContext))
                     {
-                        resourceMap.Add(jobContext, new HashSet<Resource>());
-                        HashSet<Resource> gotSet = new();
+                        resourceMap.Add(jobContext, new HashSet<ResourceClass>());
+                        HashSet<ResourceClass> gotSet = new();
                         resourceMap[jobContext].Add(resource);
                     }
                     else
                     {
-                        HashSet<Resource> gotSet = new();
+                        HashSet<ResourceClass> gotSet = new();
                         resourceMap.TryGetValue(jobContext, out gotSet);
                         if (gotSet.Contains(resource))
                         {
@@ -364,7 +364,7 @@ namespace TaskScheduler.Scheduler
                     //Adding next four lines of code so I can remember who is waiting on what
                     if(!jobWaitingOnResources.ContainsKey(jobContext))
                     {
-                        jobWaitingOnResources.Add(jobContext, new HashSet<Resource>());
+                        jobWaitingOnResources.Add(jobContext, new HashSet<ResourceClass>());
                     }
                     jobWaitingOnResources[jobContext].Add(resource);
                     //Pause the job and lock the semaphore

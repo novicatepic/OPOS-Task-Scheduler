@@ -41,8 +41,8 @@ namespace TaskScheduler
         private readonly Action<JobContext> onJobStopped;
         private readonly Action<JobContext> onJobStarted;
         private readonly Action<JobContext, JobContext> onJobWait;
-        private readonly Action<JobContext, Resource> onResourceWanted;
-        private readonly Action<JobContext, Resource> onResourceReleased;
+        private readonly Action<JobContext, ResourceClass> onResourceWanted;
+        private readonly Action<JobContext, ResourceClass> onResourceReleased;
         private readonly Action<JobContext> onJobExecution;
         //WAS INIT
         
@@ -56,10 +56,6 @@ namespace TaskScheduler
         internal bool shouldLeave = false;
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
-
-        
-
-
 
         private static int staticId;
         public int id { get; set; }
@@ -162,8 +158,8 @@ namespace TaskScheduler
             Action<JobContext> onJobStopped,
             Action<JobContext> onJobStarted,
             Action<JobContext, JobContext> onJobWait,
-            Action<JobContext, Resource> onResourceWanted,
-            Action<JobContext, Resource> onResourceReleased,
+            Action<JobContext, ResourceClass> onResourceWanted,
+            Action<JobContext, ResourceClass> onResourceReleased,
             Action<JobContext> onJobExecution,
             bool isSeparate)
         {
@@ -620,6 +616,8 @@ namespace TaskScheduler
             //If job worked longer than it should have work
             if (differenceInMilliseconds >= MaxExecutionTime)
             {
+                State = JobState.Finished;
+                jobState = JobState.Finished;
                 return true;
             }
             //Else return false
@@ -754,7 +752,7 @@ namespace TaskScheduler
         internal SemaphoreSlim resourceSemaphore = new SemaphoreSlim(0);
         internal bool shouldWaitForResource = false;
         private bool wantsResourse = false;
-        internal void RequestResource(Resource resource)
+        internal void RequestResource(ResourceClass resource)
         {
             lock (jobContextLock)
             {
@@ -783,9 +781,9 @@ namespace TaskScheduler
             }
         }
 
-        private HashSet<Resource> waitedResources = new();
+        private HashSet<ResourceClass> waitedResources = new();
         private bool wantsMoreResources = false;
-        internal void RequestResources(HashSet<Resource> resources)
+        internal void RequestResources(HashSet<ResourceClass> resources)
         {
             lock (jobContextLock)
             {
@@ -816,7 +814,7 @@ namespace TaskScheduler
             }
         }
 
-        Resource waitedResource = null;
+        ResourceClass waitedResource = null;
         public void CheckForResourse()
         {
             //bool shouldPause = false;
@@ -867,7 +865,7 @@ namespace TaskScheduler
             }
         }
 
-        public void ReleaseResource(Resource resource)
+        public void ReleaseResource(ResourceClass resource)
         {
             lock (jobContextLock)
             {
@@ -894,7 +892,7 @@ namespace TaskScheduler
             }
         }
 
-        public void ReleaseResources(HashSet<Resource> resources)
+        public void ReleaseResources(HashSet<ResourceClass> resources)
         {
             lock (jobContextLock)
             {
@@ -978,6 +976,12 @@ namespace TaskScheduler
         public void SetProgress(double progress)
         {
             Progress = progress;
+        }
+
+        public long execTime = 0;
+        public void SetJobTime(long time)
+        {
+            execTime = time;
         }
     }
 }

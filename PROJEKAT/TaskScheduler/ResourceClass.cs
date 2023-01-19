@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler
 {
-    public class Resource
+    public class ResourceClass
     {
         private string name;
         private int id;
         private static int uniqueID = 1;
         //private bool locked = false;
 
-        public Resource(string name)
+        public ResourceClass(string name)
         {
             this.name = name;
             this.name += id;

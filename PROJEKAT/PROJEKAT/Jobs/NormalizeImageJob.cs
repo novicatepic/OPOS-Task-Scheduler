@@ -16,6 +16,7 @@ namespace PROJEKAT.Jobs
         public int SingleParralelism { get; init; } = 2;
         private const float MIN_BRIGHTNESS = 0;
         private const float MAX_BRIGHTNESS = 1;
+        public long time;
         public int SleepTime { get; init; } = 500;
         //public List<(string, string)> PathTupple { get; init; } = new();
 
@@ -143,6 +144,8 @@ namespace PROJEKAT.Jobs
                 });
 
                 stopwatch.Stop();
+                time = stopwatch.ElapsedMilliseconds;
+                jobApi.SetJobTime(time);
                 //Check to see if faster -> it is on a small sample
                 Console.WriteLine("Elapsed Time is {0} ms", stopwatch.ElapsedMilliseconds);
 

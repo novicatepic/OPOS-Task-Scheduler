@@ -29,6 +29,7 @@ Job jobA = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 })
 { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
 
+
 Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
@@ -53,9 +54,9 @@ Job jobX = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 })
 { Priority = 0} );
 
-Resource a = new Resource("R1");
-Resource b = new Resource("R2");
-Resource c = new Resource("R3");
+ResourceClass a = new ResourceClass("R1");
+ResourceClass b = new ResourceClass("R2");
+ResourceClass c = new ResourceClass("R3");
 //Thread.Sleep(1000);
 Console.WriteLine("PAUSE REQUESTED!");
 //jobB.RequestPause();
@@ -86,15 +87,45 @@ List<string> inputPaths = new();
 inputPaths.Add(path);
 //inputPaths.Add(path2);
 
-Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
+/*Job demoJob = taskScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
 {
     Name = "Job A",
     Parallelism = 1,
     SingleParralelism = 2
 })
-{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
+{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });*/
 //Thread.Sleep(2000);
 //demoJob.RequestStop();
+
+AbstractScheduler prioritySchedulerPreemptive2;
+prioritySchedulerPreemptive2 = new PrioritySchedulerNoPreemption()
+{
+    MaxConcurrentTasks = 2
+};
+
+ResourceClass a1 = new ResourceClass("R1");
+Job jobA1 = prioritySchedulerPreemptive2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job A",
+    NumIterations = 5,
+    SleepTime = 1000
+})
+{ Priority = 2 });
+Job jobB1 = prioritySchedulerPreemptive2.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+{
+    Name = "Job B",
+    NumIterations = 5,
+    SleepTime = 1000
+})
+{ Priority = 1 });
+jobA1.RequestResource(a1);
+Thread.Sleep(200);
+prioritySchedulerPreemptive2.ScheduleUnscheduledJob(jobB1);
+Thread.Sleep(200);
+jobB1.RequestResource(a1);
+HashSet<TaskScheduler.ResourceClass> resources = new HashSet<TaskScheduler.ResourceClass>();
+//prioritySchedulerPreemptive2.resourceMap.TryGetValue(jobA.GetJobContext(), out resources);
+//Assert.IsTrue(jobA.GetJobContext().Priority > jobB.GetJobContext().Priority);
 
 
 

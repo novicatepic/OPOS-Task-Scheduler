@@ -9,13 +9,13 @@ namespace TaskScheduler.Scheduler
 {
     public class PreemptiveScheduler : AbstractScheduler, IPreemption
     {
-        protected Dictionary<Resource, int> rememberPast = new();
+        protected Dictionary<ResourceClass, int> rememberPast = new();
         internal override void ScheduleJob(JobContext jobContext)
         {
             //throw new NotImplementedException();
         }
 
-        internal override void HandleResourceWanted(JobContext jobContext, Resource resource)
+        internal override void HandleResourceWanted(JobContext jobContext, ResourceClass resource)
         {
             lock (schedulerLock)
             {
@@ -70,13 +70,13 @@ namespace TaskScheduler.Scheduler
                 {
                     if (!resourceMap.ContainsKey(jobContext))
                     {
-                        resourceMap.Add(jobContext, new HashSet<Resource>());
-                        HashSet<Resource> gotSet = new();
+                        resourceMap.Add(jobContext, new HashSet<ResourceClass>());
+                        HashSet<ResourceClass> gotSet = new();
                         resourceMap[jobContext].Add(resource);
                     }
                     else
                     {
-                        HashSet<Resource> gotSet = new();
+                        HashSet<ResourceClass> gotSet = new();
                         resourceMap.TryGetValue(jobContext, out gotSet);
                         if (gotSet.Contains(resource))
                         {
@@ -98,7 +98,7 @@ namespace TaskScheduler.Scheduler
                     //Adding next four lines of code so I can remember who is waiting on what
                     if (!jobWaitingOnResources.ContainsKey(jobContext))
                     {
-                        jobWaitingOnResources.Add(jobContext, new HashSet<Resource>());
+                        jobWaitingOnResources.Add(jobContext, new HashSet<ResourceClass>());
                     }
                     jobWaitingOnResources[jobContext].Add(resource);
                     //Pause the job and lock the semaphore
@@ -120,7 +120,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        internal override void HandleResourceReleased(JobContext jobContext, Resource resource)
+        internal override void HandleResourceReleased(JobContext jobContext, ResourceClass resource)
         {
             lock (schedulerLock)
             {
