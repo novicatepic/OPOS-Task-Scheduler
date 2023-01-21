@@ -369,6 +369,7 @@ namespace TaskScheduler.Scheduler
                     jobWaitingOnResources[jobContext].Add(resource);
                     //Pause the job and lock the semaphore
                     jobContext.SetJobState(JobContext.JobState.Paused);
+                    Console.WriteLine("PAUSED!");
                     jobContext.shouldWaitForResource = true;
                     //It's basically not in running jobs anymore
                     runningJobs.Remove(jobContext);

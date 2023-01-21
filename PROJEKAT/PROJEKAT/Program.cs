@@ -12,25 +12,22 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new FIFOScheduler()
+AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
 {
-    MaxConcurrentTasks = 1
-    //jobQueue = new PriorityQueue()
+    MaxConcurrentTasks = 2
 };
 
-//PriorityQueue pq = taskScheduler.jobQueue as  PriorityQueue;
-//pq.SetWithPreemption(true);
 
-Job jobA = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
     NumIterations = 10,
-    SleepTime = 500
+    SleepTime = 1000
 })
 { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
 
 
-Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job B",
     NumIterations = 10,
@@ -38,7 +35,7 @@ Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 })
 { Priority = 2 });
 
-Job jobC = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobC = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job C",
     NumIterations = 10,
@@ -46,7 +43,7 @@ Job jobC = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 })
 { Priority = 1 });
 
-Job jobX = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job X",
     NumIterations =10,
@@ -58,16 +55,22 @@ ResourceClass a = new ResourceClass("R1");
 ResourceClass b = new ResourceClass("R2");
 ResourceClass c = new ResourceClass("R3");
 //Thread.Sleep(1000);
-Console.WriteLine("PAUSE REQUESTED!");
+//Console.WriteLine("PAUSE REQUESTED!");
 //jobB.RequestPause();
 //taskScheduler.ScheduleUnscheduledJob(jobC);
 //Console.WriteLine("STOP REQQ");
 //jobA.RequestStop();
 //Console.WriteLine("STATE: " + jobA.jobContext.State);
-//jobA.RequestResource(a);
-//Thread.Sleep(1000);
-//jobB.RequestResource(a);
-//Thread.Sleep(500);
+jobA.RequestResource(a);
+Thread.Sleep(1000);
+jobB.RequestResource(a);
+Thread.Sleep(1000);
+Console.WriteLine("A=" + jobA.GetJobContext().Priority);
+Console.WriteLine("B=" + jobB.GetJobContext().Priority);
+if(jobA.GetJobContext().Priority == jobB.GetJobContext().Priority)
+{
+    Console.WriteLine("SAME");
+}
 Console.WriteLine("RELEASE CALLED!");
 //jobA.ReleaseResource(a);
 //var path = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
@@ -97,7 +100,7 @@ inputPaths.Add(path);
 //Thread.Sleep(2000);
 //demoJob.RequestStop();
 
-AbstractScheduler prioritySchedulerPreemptive2;
+/*AbstractScheduler prioritySchedulerPreemptive2;
 prioritySchedulerPreemptive2 = new PrioritySchedulerNoPreemption()
 {
     MaxConcurrentTasks = 2
@@ -123,7 +126,7 @@ Thread.Sleep(200);
 prioritySchedulerPreemptive2.ScheduleUnscheduledJob(jobB1);
 Thread.Sleep(200);
 jobB1.RequestResource(a1);
-HashSet<TaskScheduler.ResourceClass> resources = new HashSet<TaskScheduler.ResourceClass>();
+HashSet<TaskScheduler.ResourceClass> resources = new HashSet<TaskScheduler.ResourceClass>();*/
 //prioritySchedulerPreemptive2.resourceMap.TryGetValue(jobA.GetJobContext(), out resources);
 //Assert.IsTrue(jobA.GetJobContext().Priority > jobB.GetJobContext().Priority);
 

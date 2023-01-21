@@ -417,6 +417,66 @@ namespace Tests
         }
 
         [Test]
+        public void WaitsOnResourceTest()
+        {
+            Job jobA = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job A",
+                NumIterations = 10,
+                SleepTime = 500
+            })
+            { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
+
+
+            Job jobB = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job B",
+                NumIterations = 10,
+                SleepTime = 1000
+            })
+            { Priority = 2 });
+            ResourceClass a = new ResourceClass("R1");
+            jobA.RequestResource(a);
+            Thread.Sleep(1000);
+            jobB.RequestResource(a);
+            Thread.Sleep(1000);
+            Assert.IsFalse(jobB.GetJobContext().jobState == JobContext.JobState.Running);
+            jobA.ReleaseResource(a);
+        }
+
+        //IT CHANGES PRIORITY AND WORKS IN MAIN, IN TESTS DOESN'T WORK
+        //SOMETIMES DOES, SOMETIMES DOESN'T
+        //EITHER WAY, IT PRINTS OUT 2, WHICH MEANS THAT PRIORITY HAS CHANGED, TESTED IN MAIN...
+        [Test]
+        public void InversePriorityTest()
+        {
+            Job jobA = priorityScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job A",
+                NumIterations = 10,
+                SleepTime = 1000
+            })
+            { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
+
+
+            Job jobB = priorityScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job B",
+                NumIterations = 10,
+                SleepTime = 1000
+            })
+            { Priority = 2 });
+
+            ResourceClass a = new ResourceClass("R1");
+            jobA.RequestResource(a);
+            Thread.Sleep(1000);
+            jobB.RequestResource(a);
+            Thread.Sleep(1000);
+            Assert.IsTrue(jobA.GetJobContext().Priority == jobB.GetJobContext().Priority);
+            //Console.WriteLine(jobA.GetJobContext().Priority); Console.WriteLine(jobB.GetJobContext().Priority);
+        }
+
+        [Test]
         public void TestImageProcessingSpeed()
         {
             string path = "Images/InputImages/";
@@ -446,7 +506,7 @@ namespace Tests
         /*[Test]
         public void TestSingleImageProcessingSpeed()
         {
-            string path = "Images/InputImages/";
+            string path = "Images/InputImage/";
             string outputPath = "Images/OutputImages/";
             List<(string, string)> tupple = new List<(string, string)>();
             tupple.Add((path, outputPath));
@@ -468,36 +528,8 @@ namespace Tests
                 SingleParralelism = 1
             })
             { });
-            Thread.Sleep(10000);
+            Thread.Sleep(5000);
             Assert.IsTrue(demoJob.GetJobContext().execTime < demoJob2.GetJobContext().execTime);
         }*/
-
-        /*[Test]
-        public void PIPTest()
-        {
-            ResourceClass a = new ResourceClass("R1");
-            Job jobA = priorityScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
-            {
-                Name = "Job A",
-                NumIterations = 5,
-                SleepTime = 1000
-            })
-            { Priority = 3 });
-            Job jobB = priorityScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
-            {
-                Name = "Job B",
-                NumIterations = 5,
-                SleepTime = 1000
-            })
-            { Priority = 2 });
-            Thread.Sleep(100);
-            jobA.RequestResource(a);
-            Thread.Sleep(200);
-            Thread.Sleep(600);
-            jobB.RequestResource(a);
-            Thread.Sleep(200);
-            Assert.IsTrue(jobA.GetJobContext().Priority <= jobB.GetJobContext().Priority);
-        }*/
-
     }
 }

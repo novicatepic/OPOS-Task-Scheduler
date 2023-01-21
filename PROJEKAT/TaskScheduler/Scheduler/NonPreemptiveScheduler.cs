@@ -35,6 +35,7 @@ namespace TaskScheduler.Scheduler
                                 rememberPast.Add(resource, jobContext.Priority);
                                 element.Key.InversePriority(jobContext.Priority);
                                 Console.WriteLine("INVERSED!!!");
+                                Console.WriteLine(element.Key.Priority);
                                 //CheckPreemption(element.Key);
                             }
 
