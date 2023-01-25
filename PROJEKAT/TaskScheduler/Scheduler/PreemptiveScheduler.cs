@@ -175,6 +175,7 @@ namespace TaskScheduler.Scheduler
             int index = -1;
             for (int i = 0; i < runningJobs.Count; i++)
             {
+                //WHENEVER A JOB IS ADDED, CHECK PRIORITY
                 //POTENTIAL PROBLEM -> BE CAREFUL (WHEN TWO JOBS ARE ADDED NEXT TO EACH OTHER SAME JOB IS GOING TO BE PREEMPTED
                 //THEREFORE, PROBABLY SHOULD HAVE ANOTHER CONDITION IN IF STATEMENT
                 if (runningJobs.ElementAt(i).Priority > jobContext.Priority && runningJobs.ElementAt(i).Priority > maxPriority)
@@ -205,6 +206,7 @@ namespace TaskScheduler.Scheduler
                 }
                 else
                 {
+                    //CHECK PREEMPTION WHEN RELEASED FROM PAUSE
                     CheckPreemption(jobContext);
                     //jobQueue.Enqueue(jobContext, jobContext.Priority);
                 }

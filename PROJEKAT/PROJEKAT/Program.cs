@@ -12,7 +12,7 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
     MaxConcurrentTasks = 2
 };
 
-AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
+AbstractScheduler taskScheduler = new FIFOScheduler()
 {
     MaxConcurrentTasks = 2
 };
@@ -21,10 +21,11 @@ AbstractScheduler taskScheduler = new PrioritySchedulerNoPreemption()
 Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
-    NumIterations = 10,
+    NumIterations = 50,
     SleepTime = 1000
 })
-{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45)});
+{ MaxExecutionTime=2000 });
+
 
 
 Job jobB = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
@@ -54,6 +55,10 @@ Job jobX = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJ
 ResourceClass a = new ResourceClass("R1");
 ResourceClass b = new ResourceClass("R2");
 ResourceClass c = new ResourceClass("R3");
+
+Thread.Sleep(3000);
+Console.WriteLine("STATE="+jobA.GetJobContext().State);
+
 //Thread.Sleep(1000);
 //Console.WriteLine("PAUSE REQUESTED!");
 //jobB.RequestPause();
@@ -61,17 +66,13 @@ ResourceClass c = new ResourceClass("R3");
 //Console.WriteLine("STOP REQQ");
 //jobA.RequestStop();
 //Console.WriteLine("STATE: " + jobA.jobContext.State);
-jobA.RequestResource(a);
-Thread.Sleep(1000);
-jobB.RequestResource(a);
-Thread.Sleep(1000);
-Console.WriteLine("A=" + jobA.GetJobContext().Priority);
-Console.WriteLine("B=" + jobB.GetJobContext().Priority);
-if(jobA.GetJobContext().Priority == jobB.GetJobContext().Priority)
-{
-    Console.WriteLine("SAME");
-}
-Console.WriteLine("RELEASE CALLED!");
+//jobA.RequestResource(a);
+//Thread.Sleep(1000);
+//jobB.RequestResource(a);
+//Thread.Sleep(1000);
+//Console.WriteLine("A=" + jobA.GetJobContext().Priority);
+//Console.WriteLine("B=" + jobB.GetJobContext().Priority);
+//Console.WriteLine("RELEASE CALLED!");
 //jobA.ReleaseResource(a);
 //var path = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
 //Bitmap image = (Bitmap)System.Drawing.Image.FromFile(path);

@@ -8,6 +8,7 @@ namespace TaskScheduler
 {
     public class ResourceClass
     {
+        //Name has to be unique
         private string name;
         private int id;
         private static int uniqueID = 1;

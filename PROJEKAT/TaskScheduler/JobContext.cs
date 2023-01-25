@@ -18,7 +18,9 @@ namespace TaskScheduler
             Running,
             RunningWithPauseRequest,
             WaitingToResume,
+            //In round robin and priority with slicing
             SlicePaused,
+            //in priority implementations
             PriorityPaused,
             Paused,
             Stopped,
@@ -62,6 +64,7 @@ namespace TaskScheduler
         public int Priority { get; set; }
 
         private double progress;
+        //GUI stuff
         public double Progress
         {
             get
@@ -200,7 +203,7 @@ namespace TaskScheduler
             this.onJobExecution = onJobExecution;
         }
 
-        //SEPARATE PROCESS CONSTRUCTOR
+        //SEPARATE PROCESS CONSTRUCTOR, without handlers (no scheduler)
         public JobContext(IUserJob userJob, int priority, DateTime startTime, DateTime finishTime, int maxExecutionTime, bool isSeparate)
         {
             this.userJob = userJob;
@@ -267,6 +270,7 @@ namespace TaskScheduler
                         pauseCheck = true;
                         break;
                     case JobState.PriorityPaused:
+                        //start from priority
                         State = JobState.Running;
                         if (shouldWaitForPriority)
                         {
@@ -277,6 +281,7 @@ namespace TaskScheduler
                         pauseCheck = true;
                         break;
                     case JobState.SlicePaused:
+                        //start from slice
                         State = JobState.Running;
                         if (sliced)
                         {
@@ -287,6 +292,7 @@ namespace TaskScheduler
                         pauseCheck = true;
                         break;
                     case JobState.Paused:
+                        //release from resource wait
                         State = JobState.Running;
                         
                         /*if(shouldWaitForPriority)
@@ -347,7 +353,7 @@ namespace TaskScheduler
                         
                         break;
                     case JobState.Finished:
-                        throw new InvalidOperationException("Job already finished.");
+                        break;
                     /*case JobState.Stopped:
                         throw new InvalidOperationException("Job stopped.");*/
                     default:
@@ -360,6 +366,7 @@ namespace TaskScheduler
         //Thread doesn't run anymore but it waits (semaphore) and increases numWaiters so they can be released
         internal void Wait()
         {
+            //disabling wait for one process -> bugs
             if (!AbstractScheduler.isOne)
             {
                 lock (jobContextLock)
@@ -482,6 +489,7 @@ namespace TaskScheduler
             }
         }
 
+        //Same logic for pause, request stoppage and later check it
         public void RequestStop()
         {
             lock (jobContextLock)
@@ -552,6 +560,7 @@ namespace TaskScheduler
             }
         }
 
+        //Call handler if stopped
         public void CheckForStoppage()
         {
             lock (jobContextLock)
@@ -592,6 +601,9 @@ namespace TaskScheduler
         }
 
         //PROBABLY THERE IS A BETTER IMPLEMENTATION, AND THAT IS TO CHECK TIME SOMEWHERE INTERNALLY, THIS IS NOT PRECISE ENOUGH
+        //But it works as follows:
+        //if max time was not set, don't do anything
+        //Else calculate time from pause to start and add aggregated time from before
         private double differenceInMilliseconds = 0;
         
         public bool CheckExecutionTime()
@@ -616,6 +628,8 @@ namespace TaskScheduler
             //If job worked longer than it should have work
             if (differenceInMilliseconds >= MaxExecutionTime)
             {
+                //Console.WriteLine("BREAK");
+                onJobFinished(this);
                 State = JobState.Finished;
                 jobState = JobState.Finished;
                 return true;
@@ -624,6 +638,7 @@ namespace TaskScheduler
             return false;
         }
 
+        //If valid finish time was set (didn't stay default), just simple if check
         public bool CheckFinishTime()
         {
             //Base cases
@@ -641,6 +656,7 @@ namespace TaskScheduler
             return true;
         }
 
+        //When checking start  time, there is another thread that loops in a while (bad implementation, but works)
         public void CheckStartTime()
         {
             //If it stayed default or user specified a date in the past
@@ -683,6 +699,7 @@ namespace TaskScheduler
             return jobState == JobState.Stopped;
         }
 
+        //just set flag
         internal void RequestPriorityStoppage()
         {
             lock (jobContextLock)
@@ -692,6 +709,7 @@ namespace TaskScheduler
         }
 
         internal bool shouldWaitForPriority = false;
+        //If there was call to wait for priority -> thread has to pause
         public void CheckForPriorityStoppage()
         {            
             lock (jobContextLock)
@@ -713,6 +731,7 @@ namespace TaskScheduler
             }
         }
 
+        //Same logic as priority -> just set the flag
         internal void RequestSliceStoppage()
         {
             lock (jobContextLock)
@@ -722,6 +741,7 @@ namespace TaskScheduler
         }
 
         internal bool sliced = false;
+        //pause if sliced
         public void CheckSliceStoppage()
         {
             lock (jobContextLock)
@@ -752,6 +772,7 @@ namespace TaskScheduler
         internal SemaphoreSlim resourceSemaphore = new SemaphoreSlim(0);
         internal bool shouldWaitForResource = false;
         private bool wantsResourse = false;
+        //When requesting resource, I have to remember which resource it is, so I can check it later in CheckForResource
         internal void RequestResource(ResourceClass resource)
         {
             lock (jobContextLock)
@@ -781,6 +802,7 @@ namespace TaskScheduler
             }
         }
 
+        //Same as single resource, just multiple resources
         private HashSet<ResourceClass> waitedResources = new();
         private bool wantsMoreResources = false;
         internal void RequestResources(HashSet<ResourceClass> resources)
@@ -814,6 +836,7 @@ namespace TaskScheduler
             }
         }
 
+        //Call handler
         ResourceClass waitedResource = null;
         public void CheckForResourse()
         {
@@ -865,6 +888,7 @@ namespace TaskScheduler
             }
         }
 
+        //Call release resource handler
         public void ReleaseResource(ResourceClass resource)
         {
             lock (jobContextLock)
@@ -892,6 +916,7 @@ namespace TaskScheduler
             }
         }
 
+        //Same logic as for one resource released, just one loop added
         public void ReleaseResources(HashSet<ResourceClass> resources)
         {
             lock (jobContextLock)
@@ -922,6 +947,7 @@ namespace TaskScheduler
             }
         }
 
+        //Method made from gui to help
         public void ExecuteJobManually()
         {
             lock(jobContextLock)
@@ -947,6 +973,8 @@ namespace TaskScheduler
         private HashSet<int> priorities = new();
 
 
+        //When inversing priority, change priority to a new one (which is the same as the other process which called for the resource)
+        //And remember old priority, so I can go back to it later
         internal void InversePriority(int newPriority)
         {
             lock(jobContextLock)
@@ -958,6 +986,7 @@ namespace TaskScheduler
             }
         }
 
+        //Get back to old priority when releasing the resource which made problems
         internal void ReversePriority()
         {
             lock(jobContextLock)

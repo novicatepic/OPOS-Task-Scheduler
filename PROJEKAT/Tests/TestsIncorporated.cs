@@ -218,6 +218,7 @@ namespace Tests
             Assert.IsTrue(jobC.GetJobContext().State == JobContext.JobState.Running && jobA.GetJobContext().State == JobContext.JobState.Running);
         }
 
+        //ALSO WORKS IN MEAN, PRINTS OUT FINISHED
         [Test]
         public void TestMaxExecutionTime()
         {
@@ -225,12 +226,12 @@ namespace Tests
             {
                 Name = "Job A",
                 NumIterations = 10,
-                SleepTime = 10000
+                SleepTime = 1000
             })
             { MaxExecutionTime=2000 });
             fifoScheduler.ScheduleUnscheduledJob(jobA);
             Thread.Sleep(3000);
-            Assert.IsTrue(jobA.GetJobContext().State == JobContext.JobState.Running);
+            Assert.IsTrue(jobA.GetJobContext().State == JobContext.JobState.Finished);
         }
 
         [Test]

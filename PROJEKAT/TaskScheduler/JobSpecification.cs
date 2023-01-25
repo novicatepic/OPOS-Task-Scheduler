@@ -10,6 +10,7 @@ namespace TaskScheduler
     //IJobContext checks for pause
     public class JobSpecification
     {
+        //Specification elements
         public IUserJob UserJob { get; set; }
         public int Priority { get; set; } = 0;
         public DateTime StartTime { get; set; } = new DateTime(2010, 01, 01);       //Time specifying when the job will be started

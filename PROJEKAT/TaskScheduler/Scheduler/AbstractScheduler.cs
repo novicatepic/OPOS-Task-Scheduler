@@ -83,6 +83,9 @@ namespace TaskScheduler.Scheduler
             return Schedule(jobSpecification);
         }
 
+        //Add job in a queue that's not going to start yet
+        //Because it will potentially be started later 
+        //Also set state to a newly made state -> NotScheduled
         public Job AddJobWithoutScheduling(JobSpecification jobSpecification)
         {
             JobContext jobContext = CreateJobContext(jobSpecification);
@@ -103,6 +106,7 @@ namespace TaskScheduler.Scheduler
             return job;
         }
 
+        //Maybe should throw an exception if an user makes a mistake
         public void ScheduleUnscheduledJob(Job job)
         {
             if (jobsWihoutStart.Contains(job))
@@ -124,9 +128,12 @@ namespace TaskScheduler.Scheduler
             {
                 if(resourceMap.ContainsKey(jobContext))
                 {
+                    //If the job holds the resource
                     if (resourceMap[jobContext].Contains(resource))
                     {
+                        //Remove resource from that job
                         resourceMap[jobContext].Remove(resource);
+                        //For each job that waits on that resource which is being released
                         foreach(var job in jobWaitingOnResources)
                         {
                             if(job.Value.Contains(resource))
@@ -171,6 +178,7 @@ namespace TaskScheduler.Scheduler
                     runningJobs.Add(dequeuedJobContext);
                     dequeuedJobContext.Start();
                 }
+                //Release job from resource map -> it's dead now
                 HashSet<ResourceClass> resources = new();
                 if (resourceMap.ContainsKey(jobContext))
                 {
@@ -191,11 +199,13 @@ namespace TaskScheduler.Scheduler
                                 if (element.Value.Count == 0) isZero = true;
                             }
                         }
+                        //If job is not waiting for anything else, start it because it should be started
                         if(isZero && runningJobs.Count < MaxConcurrentTasks)
                         {
                             runningJobs.Add(element.Key);
                             element.Key.Start();
                         }
+                        //Else if queue is full, add it to runningJobs
                         else if(isZero)
                         {
                             jobQueue.Enqueue(element.Key, element.Key.Priority);
@@ -271,11 +281,7 @@ namespace TaskScheduler.Scheduler
                 {
                     runningJobs.Remove(jobContext);
                 }
-                /*else
-                {
-                    
-                }*/
-                
+
                 if (jobQueue.Count() > 0)
                 {
                     JobContext dequeuedJobContext = jobQueue.Dequeue();
@@ -293,7 +299,6 @@ namespace TaskScheduler.Scheduler
             }
         }
 
-        //TODO: Make it work with Schedule(jobSpecification)
         internal void HandleJobExecution(JobContext jobContext)
         {
             lock (schedulerLock)
@@ -307,6 +312,7 @@ namespace TaskScheduler.Scheduler
 
             lock (schedulerLock)
             {
+                
                 bool someoneHoldingResource = false;
                 foreach (var element in resourceMap)
                 {
@@ -316,6 +322,8 @@ namespace TaskScheduler.Scheduler
                         break;
                     }
                 }
+                //IF SOMEONE IS HOLDING WANTED RESOURCE
+                //ADD JOB CONTEXT ON WAITING QUEUE
                 if (someoneHoldingResource)
                 {
                     for (int i = 0; i < resourceMap.Count; i++)
@@ -334,6 +342,7 @@ namespace TaskScheduler.Scheduler
                 }
                 else
                 {
+                    //ELSE JOBCONTEXT CAN GET THE RESOURCE FREELY
                     if (!resourceMap.ContainsKey(jobContext))
                     {
                         resourceMap.Add(jobContext, new HashSet<ResourceClass>());
@@ -359,6 +368,7 @@ namespace TaskScheduler.Scheduler
                 bool cycleFound = graph.DFSForCycleCheck(jobContext.GetID());
 
                 //PREVENT EVENTUAL CYCLE PROBLEMS WTIH cycleFound in if-condition
+                //IF JOB WAS RUNNING AND WANTED RESORUCE THAT IS HELD -> PAUSE IT
                 if (someoneHoldingResource && cycleFound == false)
                 {
                     //Adding next four lines of code so I can remember who is waiting on what
@@ -400,8 +410,7 @@ namespace TaskScheduler.Scheduler
                 {
                     deadlockDetectionGraph.nodes[i] = runningJobs.ElementAt(i).GetID();
                 }
-
-                //KEEP IT SIMPLE STUPID
+                //GET  GRAPH MAPPINGS TO CHECK IF THERE IS A POTENTIAL CYCLE
                 for (int i = 0; i < graphSize; i++)
                 {
                     if (whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))

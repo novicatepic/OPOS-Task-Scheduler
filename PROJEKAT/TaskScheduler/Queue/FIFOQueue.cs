@@ -18,6 +18,7 @@ namespace TaskScheduler.Queue
 
         private Queue<JobContext> queue = new();
 
+        //Ignore priority
         internal override void Enqueue(JobContext jobContext, int priority)
         {
             queue.Enqueue(jobContext);

@@ -28,6 +28,7 @@ namespace TaskScheduler.Scheduler
                     {
                         someoneHoldingResource = true;
                         //IF ELEMENT HOLDING THE RESOURCE HAS WEAKER PRIORITY
+                        //THEN INVERSE PRIORITY
                         if (element.Key.Priority > jobContext.Priority/* && element.Key.oldPriority == -1*/)
                         {
                             if (!rememberPast.ContainsKey(resource))

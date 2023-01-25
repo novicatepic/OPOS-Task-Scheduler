@@ -39,14 +39,17 @@ namespace GUITs
             InitializeComponent();
             this.abstractScheduler = abstractScheduler;
 
+            //Find all job types in project PROJEKAT
             Type[] types = JobTypes.GetJobTypes();
             
             List<Type> tips = new();
 
             foreach(Type type in types)
             {
+                //If it implements IUserJob
                 if (type.GetInterfaces().Contains(typeof(IUserJob))) 
                 {
+                    //Add it to the list
                     tips.Add(type);
                 }
             }

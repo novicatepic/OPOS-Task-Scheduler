@@ -12,6 +12,7 @@ namespace TaskScheduler
         //So user doesn't know what is really happening
 
         public readonly JobContext jobContext;
+        //to know which constructor to call
         private bool isSeparate = false;
 
         internal Job(JobContext jobContext)

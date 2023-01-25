@@ -41,6 +41,7 @@ namespace PROJEKAT.Jobs
 
                 if (jobApi.CheckConditions())
                 {
+                    //Console.WriteLine("BROKE");
                     break;
                 }
                 Thread.Sleep(SleepTime);

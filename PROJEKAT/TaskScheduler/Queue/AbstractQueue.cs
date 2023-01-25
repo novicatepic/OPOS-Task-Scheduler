@@ -11,7 +11,8 @@ namespace TaskScheduler.Queue
 {
     internal abstract class AbstractQueue
     {
-        //protected ObservableHashSet<JobContext> queue = new();
+        //SIMPLE ABSTRACT QUEUE CLASS
+        //Bad implementation to have priority in enqueue
         internal abstract void Enqueue(JobContext jobContext, int priority);
         internal abstract JobContext Dequeue();
 

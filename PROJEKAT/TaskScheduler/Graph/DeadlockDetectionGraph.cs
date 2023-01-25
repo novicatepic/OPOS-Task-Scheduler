@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler.Graph
 {
+    //CODE COPIED FROM "FORMALNE METODE"
     public class DeadlockDetectionGraph
     {
         private int size;
@@ -14,6 +15,7 @@ namespace TaskScheduler.Graph
 
         //public DeadlockDetectionGraph() { }
 
+        //Initialize empty graph
         public DeadlockDetectionGraph(int size)
         {
             this.size = size;
@@ -52,6 +54,8 @@ namespace TaskScheduler.Graph
             }
         }
 
+        //Fucntion to check if there is a cycle
+        //If there was a node value in set before and we found that value again -> cycle
         public bool DFSForCycleCheck(int startState)
         {
             //Stack<int> stack = new Stack<int>();

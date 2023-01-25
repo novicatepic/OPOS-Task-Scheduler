@@ -35,9 +35,9 @@ namespace GUITs
             if(rb1.IsChecked== true ) { whichAlgorithm = "FIFO"; }
             else if(rb2.IsChecked == true) { whichAlgorithm = "RR";  }
             else if (rb3.IsChecked == true) { whichAlgorithm = "NoPreemption"; }
-            else if (rb4.IsChecked == true) { whichAlgorithm = "NoPreemptionSlice"; }
+            //else if (rb4.IsChecked == true) { whichAlgorithm = "NoPreemptionSlice"; }
             else if (rb5.IsChecked == true) { whichAlgorithm = "Preemption"; }
-            else if (rb6.IsChecked == true) { whichAlgorithm = "PreemptionSlice"; }
+            //else if (rb6.IsChecked == true) { whichAlgorithm = "PreemptionSlice"; }
             else { throw new Exception("Algorithm not picked, scheduler can't be started!"); }
 
             MainWindow mainWindow= new MainWindow(whichAlgorithm, parallelismLevel, sliceTime);

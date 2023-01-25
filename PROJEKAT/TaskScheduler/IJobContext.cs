@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace TaskScheduler
 {
-    //IJobContenxt only has CheckForPause method, for now
+    //IJobContenxt, interface which is used by a concrete job to check for different types of times
     public interface IJobContext
     {
+        //Names self explanatory
         public void CheckForPause();
         public void CheckForStoppage();
         public bool StoppageConfirmed();
@@ -17,9 +18,7 @@ namespace TaskScheduler
         public void CheckForPriorityStoppage();
         public void SetJobTime(long time);
         public void CheckSliceStoppage();
-        //public void SetFinished();
 
-        //public void CallFinish();
         public void CheckForResourse();
 
         public bool CheckConditions()
