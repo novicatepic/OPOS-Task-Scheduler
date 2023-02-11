@@ -26,7 +26,7 @@ Job jobA = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 })
 { Priority = 3 });
 
-
+//Application.ShutDown();
 
 Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
 {

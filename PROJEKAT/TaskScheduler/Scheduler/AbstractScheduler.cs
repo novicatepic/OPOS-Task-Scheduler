@@ -40,12 +40,16 @@ namespace TaskScheduler.Scheduler
 
             //Either start the job if it can be started
             //Or put in in waiting queue
+            lock (schedulerLock)
+            {
+                guiJobs.Add(jobContext);
+            }
             if (jobSpecification.StartTime < DateTime.Now)
             {
-                lock(schedulerLock)
-                {
-                    guiJobs.Add(jobContext);
-                }
+                //lock(schedulerLock)
+                //{
+                //   guiJobs.Add(jobContext);
+                //}
                 ScheduleJob(jobContext);
             }
             else

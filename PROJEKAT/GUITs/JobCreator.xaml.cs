@@ -25,7 +25,7 @@ namespace GUITs
     /// </summary>
     public partial class JobCreator : Window
     {
-        internal AbstractScheduler abstractScheduler;
+        internal static AbstractScheduler aScheduler;
 
         public JobSpecification? jobContext;
 
@@ -37,7 +37,7 @@ namespace GUITs
         public JobCreator(AbstractScheduler abstractScheduler)
         {
             InitializeComponent();
-            this.abstractScheduler = abstractScheduler;
+            aScheduler = abstractScheduler;
 
             //Find all job types in project PROJEKAT
             Type[] types = JobTypes.GetJobTypes();
@@ -140,11 +140,11 @@ namespace GUITs
 
             if(shouldStart)
             {
-                abstractScheduler.AddJobWithScheduling(jobSpecification);
+                aScheduler.AddJobWithScheduling(jobSpecification);
             }
             else
             {
-                abstractScheduler.AddJobWithoutScheduling(jobSpecification);
+                aScheduler.AddJobWithoutScheduling(jobSpecification);
             }
 
         }

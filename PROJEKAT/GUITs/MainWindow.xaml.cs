@@ -33,10 +33,9 @@ namespace GUITs
         AbstractScheduler abstractScheduler;
         public MainWindow(string algorithm, int numOfConcurrentTasks, int sliceTime)
         {
-            InitializeComponent();       
-            
-
-            switch(algorithm)
+            InitializeComponent();
+            //Application.ApplicationExit += new EventHandler(AppEvents.OnApplicationExit);
+            switch (algorithm)
             {
                 case "FIFO":
                     abstractScheduler = new FIFOScheduler() { MaxConcurrentTasks = numOfConcurrentTasks };
@@ -67,6 +66,7 @@ namespace GUITs
         {
             JobCreator jobCreator = new(abstractScheduler);
             jobCreator.Show();
+            //Application.ShutDown();
         }
 
         private void StartButton_Click(object sender, RoutedEventArgs e)
@@ -112,6 +112,11 @@ namespace GUITs
                 JobContext job = (JobContext)button.DataContext;
                 abstractScheduler.guiJobs.Remove(job);
             }
+        }
+
+        private void Application_Exit(object sender, EventArgs e)
+        {
+            MessageBox.Show("yo!");
         }
     }
 }

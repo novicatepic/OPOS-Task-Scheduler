@@ -13,5 +13,9 @@ namespace GUITs
     /// </summary>
     public partial class App : Application
     {
+        private void Application_Exit(object sender, EventArgs e)
+        {
+            MessageBox.Show(JobCreator.aScheduler.guiJobs.ElementAt(0).id.ToString());
+        }
     }
 }
