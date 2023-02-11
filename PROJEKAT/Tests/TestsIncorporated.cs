@@ -10,6 +10,7 @@ namespace Tests
     {
         AbstractScheduler fifoScheduler;
         AbstractScheduler fifoScheduler2;
+        AbstractScheduler fifoScheduler3;
         AbstractScheduler priorityScheduler;
         AbstractScheduler priorityScheduler2;
         AbstractScheduler prioritySchedulerPreemptive;
@@ -26,6 +27,10 @@ namespace Tests
             fifoScheduler2 = new FIFOScheduler()
             {
                 MaxConcurrentTasks = 2
+            };
+            fifoScheduler3 = new FIFOScheduler()
+            {
+                MaxConcurrentTasks = 3
             };
             priorityScheduler = new PrioritySchedulerNoPreemption()
             {
@@ -418,31 +423,53 @@ namespace Tests
         }
 
         [Test]
-        public void WaitsOnResourceTest()
+        public void DeadlockDetectionTest2()
         {
-            Job jobA = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            Job jobA = fifoScheduler3.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job A",
-                NumIterations = 10,
-                SleepTime = 500
+                NumIterations = 50,
+                SleepTime = 1000
             })
-            { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
+            { });
 
 
-            Job jobB = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+
+            Job jobB = fifoScheduler3.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job B",
-                NumIterations = 10,
+                NumIterations = 50,
                 SleepTime = 1000
             })
             { Priority = 2 });
+
+            Job jobC = fifoScheduler3.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job C",
+                NumIterations = 50,
+                SleepTime = 1000
+            })
+            { Priority = 1 });
+
             ResourceClass a = new ResourceClass("R1");
+            ResourceClass b = new ResourceClass("R2");
+            ResourceClass c = new ResourceClass("R3");
+
+            Thread.Sleep(600);
             jobA.RequestResource(a);
-            Thread.Sleep(1000);
-            jobB.RequestResource(a);
-            Thread.Sleep(1000);
-            Assert.IsFalse(jobB.GetJobContext().jobState == JobContext.JobState.Running);
-            jobA.ReleaseResource(a);
+            Thread.Sleep(600);
+            jobB.RequestResource(b);
+            Thread.Sleep(600);
+            jobC.RequestResource(c);
+            Thread.Sleep(600);
+            jobA.RequestResource(b);
+            Thread.Sleep(600);
+            jobB.RequestResource(c);
+            Thread.Sleep(600);
+            jobC.RequestResource(a);
+            Thread.Sleep(600);
+            Assert.IsTrue(jobA.GetJobContext().jobState == JobContext.JobState.Paused || jobB.GetJobContext().jobState == JobContext.JobState.Paused || jobC.GetJobContext().jobState == JobContext.JobState.Paused);
+
         }
 
         //IT CHANGES PRIORITY AND WORKS IN MAIN, IN TESTS DOESN'T WORK
@@ -475,6 +502,57 @@ namespace Tests
             Thread.Sleep(1000);
             Assert.IsTrue(jobA.GetJobContext().Priority == jobB.GetJobContext().Priority);
             //Console.WriteLine(jobA.GetJobContext().Priority); Console.WriteLine(jobB.GetJobContext().Priority);
+        }
+
+        [Test]
+        public void PIPTest()
+        {
+            Job jobA = prioritySchedulerPreemptive.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job A",
+                NumIterations = 50,
+                SleepTime = 1000
+            })
+            { Priority = 3 });
+
+
+
+            Job jobB = prioritySchedulerPreemptive.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job B",
+                NumIterations = 50,
+                SleepTime = 1000
+            })
+            { Priority = 2 });
+
+            Job jobC = prioritySchedulerPreemptive.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+            {
+                Name = "Job C",
+                NumIterations = 50,
+                SleepTime = 1000
+            })
+            { Priority = 1 });
+
+            ResourceClass a = new ResourceClass("R1");
+
+            Thread.Sleep(600);
+            jobA.RequestResource(a);
+
+            Thread.Sleep(600);
+            //jobB.RequestResource(a);
+            Thread.Sleep(1000);
+            prioritySchedulerPreemptive.ScheduleUnscheduledJob(jobB);
+            Thread.Sleep(1000);
+            prioritySchedulerPreemptive.ScheduleUnscheduledJob(jobC);
+            Thread.Sleep(2000);
+            jobC.RequestResource(a);
+
+            Console.WriteLine(jobA.jobContext.State);
+            Console.WriteLine(jobB.jobContext.State);
+            Console.WriteLine(jobC.jobContext.State);
+
+            Thread.Sleep(2600);
+            Assert.IsTrue(jobA.jobContext.Priority == jobC.jobContext.Priority);
         }
 
         [Test]

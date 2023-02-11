@@ -59,7 +59,7 @@ namespace TaskScheduler
         internal readonly SemaphoreSlim prioritySemaphore = new(0);
         internal readonly SemaphoreSlim sliceSemaphore = new(0);
 
-        private static int staticId;
+        private static int staticId = 0;
         public int id { get; set; }
         public int Priority { get; set; }
 

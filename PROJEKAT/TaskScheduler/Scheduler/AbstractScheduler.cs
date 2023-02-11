@@ -419,7 +419,11 @@ namespace TaskScheduler.Scheduler
                         {
                             int position = deadlockDetectionGraph.FindPositionOfState(element.GetID());
                             //Console.WriteLine("ENTERED!");
-                            deadlockDetectionGraph.ms[i, position] = 1;
+                            if(position != -1)
+                            {
+                                deadlockDetectionGraph.ms[i, position] = 1;
+                            }
+                            
                         }
                     }
                 }

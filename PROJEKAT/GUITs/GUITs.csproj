@@ -15,6 +15,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DokanNet" Version="2.0.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\PROJEKAT\PROJEKAT.csproj" />
     <ProjectReference Include="..\TaskScheduler\TaskScheduler.csproj" />
   </ItemGroup>
