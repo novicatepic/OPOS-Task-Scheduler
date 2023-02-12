@@ -399,27 +399,33 @@ namespace Tests
             Job jobA = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job A",
-                NumIterations = 5,
-                SleepTime = 2000
+                NumIterations = 50,
+                SleepTime = 500
             })
             { });
             Job jobB = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job B",
-                NumIterations = 5,
-                SleepTime = 2000
+                NumIterations = 50,
+                SleepTime = 500
             })
             {  });
-            jobA.RequestResource(b);
-            Thread.Sleep(500);
-            try
-            {
-                jobB.RequestResource(a);
-            } catch(Exception e)
-            {
-                //it should throw an exception
-            }
+            Thread.Sleep(600);
+            jobA.RequestResource(a);
 
+            Thread.Sleep(600);
+            fifoScheduler2.ScheduleUnscheduledJob(jobB);
+            Thread.Sleep(600);
+            jobB.RequestResource(b);
+            Thread.Sleep(600);
+            //taskScheduler.ScheduleUnscheduledJob(jobC);
+            //Thread.Sleep(400);
+            jobA.RequestResource(b);
+            Thread.Sleep(600);
+            jobB.RequestResource(a);
+            Thread.Sleep(600);
+            Assert.IsTrue(jobA.GetJobContext().jobState == JobContext.JobState.Running
+                && jobB.GetJobContext().jobState == JobContext.JobState.Stopped);
         }
 
         [Test]
@@ -429,7 +435,7 @@ namespace Tests
             {
                 Name = "Job A",
                 NumIterations = 50,
-                SleepTime = 1000
+                SleepTime = 500
             })
             { });
 
@@ -439,7 +445,7 @@ namespace Tests
             {
                 Name = "Job B",
                 NumIterations = 50,
-                SleepTime = 1000
+                SleepTime = 500
             })
             { Priority = 2 });
 
@@ -447,7 +453,7 @@ namespace Tests
             {
                 Name = "Job C",
                 NumIterations = 50,
-                SleepTime = 1000
+                SleepTime = 500
             })
             { Priority = 1 });
 
@@ -455,20 +461,21 @@ namespace Tests
             ResourceClass b = new ResourceClass("R2");
             ResourceClass c = new ResourceClass("R3");
 
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobA.RequestResource(a);
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobB.RequestResource(b);
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobC.RequestResource(c);
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobA.RequestResource(b);
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobB.RequestResource(c);
-            Thread.Sleep(600);
+            Thread.Sleep(1100);
             jobC.RequestResource(a);
-            Thread.Sleep(600);
-            Assert.IsTrue(jobA.GetJobContext().jobState == JobContext.JobState.Paused || jobB.GetJobContext().jobState == JobContext.JobState.Paused || jobC.GetJobContext().jobState == JobContext.JobState.Paused);
+            Thread.Sleep(1500);
+            Assert.IsTrue(jobA.GetJobContext().jobState == JobContext.JobState.Paused && jobC.GetJobContext().jobState == JobContext.JobState.Stopped
+                && jobB.GetJobContext().jobState == JobContext.JobState.Running);
 
         }
 
@@ -556,59 +563,39 @@ namespace Tests
         }
 
         [Test]
-        public void TestImageProcessingSpeed()
+        public void ResourceTakeoverTest()
         {
-            string path = "Images/InputImages/";
-            string outputPath = "Images/OutputImages/";
-            List<(string, string)> tupple = new List<(string, string)>();
-            tupple.Add((path, outputPath));
-            List<string> inputPaths = new();
-            inputPaths.Add(path);
-
-            Job demoJob = fifoScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
+            Job jobA = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job A",
-                Parallelism = 2,
+                NumIterations = 50,
+                SleepTime = 500
             })
-            { });
+            { Priority = 3 });
 
-            Job demoJob2 = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
+            //Application.ShutDown();
+
+            Job jobB = fifoScheduler2.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job B",
-                Parallelism = 1,
+                NumIterations = 50,
+                SleepTime = 500
             })
-            {});
-            Thread.Sleep(10000);
-            Assert.IsTrue(demoJob.GetJobContext().execTime < demoJob2.GetJobContext().execTime);
+            { Priority = 2 });
+
+            ResourceClass a = new ResourceClass("R1");
+
+            Thread.Sleep(600);
+            jobA.RequestResource(a);
+
+            Thread.Sleep(600);
+            fifoScheduler2.ScheduleUnscheduledJob(jobB);
+            Thread.Sleep(600);
+            jobB.RequestResource(a);
+            Thread.Sleep(3000);
+            jobA.ReleaseResource(a);
+            Thread.Sleep(600);
+            Assert.IsTrue(fifoScheduler2.resourceMap[jobB.jobContext].Contains(a) && !fifoScheduler2.resourceMap[jobA.jobContext].Contains(a));
         }
-
-        /*[Test]
-        public void TestSingleImageProcessingSpeed()
-        {
-            string path = "Images/InputImage/";
-            string outputPath = "Images/OutputImages/";
-            List<(string, string)> tupple = new List<(string, string)>();
-            tupple.Add((path, outputPath));
-            List<string> inputPaths = new();
-            inputPaths.Add(path);
-
-            Job demoJob = fifoScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
-            {
-                Name = "Job A",
-                Parallelism = 1,
-                SingleParralelism = 2
-            })
-            { });
-
-            Job demoJob2 = fifoScheduler2.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
-            {
-                Name = "Job B",
-                Parallelism = 1,
-                SingleParralelism = 1
-            })
-            { });
-            Thread.Sleep(5000);
-            Assert.IsTrue(demoJob.GetJobContext().execTime < demoJob2.GetJobContext().execTime);
-        }*/
     }
 }

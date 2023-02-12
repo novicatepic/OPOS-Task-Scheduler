@@ -17,6 +17,5 @@ namespace TaskScheduler.Queue
         internal abstract JobContext Dequeue();
 
         internal abstract int Count();
-
     }
 }

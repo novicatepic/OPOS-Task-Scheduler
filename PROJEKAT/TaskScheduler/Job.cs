@@ -24,7 +24,7 @@ namespace TaskScheduler
         {
             JobContext jobContext = new(
                 userJob: jobSpecification.UserJob,
-                priority: jobSpecification.Priority,                //priority = jobs priority
+                priority: jobSpecification.Priority,                //priority = job priority
                 startTime: jobSpecification.StartTime,
                 finishTime: jobSpecification.FinishTime,
                 maxExecutionTime: jobSpecification.MaxExecutionTime,
@@ -61,6 +61,7 @@ namespace TaskScheduler
             
         }
 
+        //Simple request functions which forward the call to JobContext
         public void RequestPause()
         {
             jobContext.RequestPause();

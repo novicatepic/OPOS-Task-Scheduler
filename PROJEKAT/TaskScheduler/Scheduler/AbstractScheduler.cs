@@ -15,16 +15,25 @@ namespace TaskScheduler.Scheduler
     public abstract class AbstractScheduler
     {
         public int MaxConcurrentTasks { get; set; } = 1;
+        //Jobs on wait
         internal AbstractQueue? jobQueue;
+        //Resources held by particular Job(Context)
         public Dictionary<JobContext, HashSet<ResourceClass>> resourceMap = new();
-        internal Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
+        //Who waits on who
+        public Dictionary<JobContext, HashSet<JobContext>> whoHoldsResources = new();
+        //Who waits on what
         internal Dictionary<JobContext, HashSet<ResourceClass>> jobWaitingOnResources = new();
+        //Who is running
         internal readonly HashSet<JobContext> runningJobs = new();
+        //Who is waiting to be started explicitly
         public readonly HashSet<Job> jobsWihoutStart = new();
+        //Who is a potential candidate to form a deadlock (graph maker)
+        protected readonly HashSet<JobContext> deadlockJobs = new();
 
         public readonly object schedulerLock = new();
         public static bool isOne = false;
 
+        //This caused me to break all OOP and SOLID principles :)
         public ObservableCollection<JobContext> guiJobs = new();
 
         private Job Schedule(JobSpecification jobSpecification)
@@ -61,6 +70,7 @@ namespace TaskScheduler.Scheduler
             return job;
         }
 
+        //Simple func
         private JobContext CreateJobContext(JobSpecification jobSpecification)
         {
             JobContext jobContext = new(
@@ -110,7 +120,7 @@ namespace TaskScheduler.Scheduler
             return job;
         }
 
-        //Maybe should throw an exception if an user makes a mistake
+        //Maybe should throw an exception if an user makes a mistake, but doesn't really matter
         public void ScheduleUnscheduledJob(Job job)
         {
             if (jobsWihoutStart.Contains(job))
@@ -142,19 +152,54 @@ namespace TaskScheduler.Scheduler
                         {
                             if(job.Value.Contains(resource))
                             {
-                                //Job doesn't wait on that resource anymore and that resource can continue to work :)
+                                //Job doesn't wait on that resource anymore and that job can continue to work :)
                                 //But only if he doesn't wait for anything else
                                 job.Value.Remove(resource);
                                 if(job.Value.Count == 0 && runningJobs.Count < MaxConcurrentTasks)
                                 {
+                                    if(deadlockJobs.Contains(job.Key))
+                                    {
+                                        deadlockJobs.Remove(job.Key);
+                                    }
+                                    //Give the resource to the corresponding job
+                                    if(!resourceMap.ContainsKey(job.Key))
+                                    {
+                                        resourceMap.Add(job.Key, new HashSet<ResourceClass>());
+                                        resourceMap[job.Key].Add(resource);
+                                        Console.WriteLine("ADDED");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("ADDED");
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    if(jobWaitingOnResources.ContainsKey(jobContext))
+                                    {
+                                        jobWaitingOnResources[jobContext].Remove(resource);
+                                    }
+                                    
                                     runningJobs.Add(job.Key);
                                     job.Key.Start();
                                 }
                                 else if(job.Value.Count == 0)
                                 {
+                                    if (!resourceMap.ContainsKey(job.Key))
+                                    {
+                                        resourceMap.Add(job.Key, new HashSet<ResourceClass>());
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    else
+                                    {
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    if (jobWaitingOnResources.ContainsKey(jobContext))
+                                    {
+                                        jobWaitingOnResources[jobContext].Remove(resource);
+                                    }
                                     jobQueue.Enqueue(job.Key, job.Key.Priority);
                                 }
                                 whoHoldsResources[jobContext].Remove(job.Key);
+                                break;
                             }
                         }
                     } 
@@ -221,6 +266,7 @@ namespace TaskScheduler.Scheduler
             }
         }
 
+        //Not necessary, thought it should be implemented this way
         internal void HandleJobWaiting(JobContext jobContextWaiting, JobContext jobContextWaited)
         {
             lock (schedulerLock)
@@ -322,6 +368,7 @@ namespace TaskScheduler.Scheduler
                 {
                     if (element.Value != null && element.Value.Contains(resource))
                     {
+                        //Found that someone is holding the resource
                         someoneHoldingResource = true;
                         break;
                     }
@@ -383,10 +430,12 @@ namespace TaskScheduler.Scheduler
                     jobWaitingOnResources[jobContext].Add(resource);
                     //Pause the job and lock the semaphore
                     jobContext.SetJobState(JobContext.JobState.Paused);
-                    Console.WriteLine("PAUSED!");
+                    deadlockJobs.Add(jobContext);
+                    //Console.WriteLine("PAUSED!");
                     jobContext.shouldWaitForResource = true;
                     //It's basically not in running jobs anymore
                     runningJobs.Remove(jobContext);
+                    //Check if there is another job to start since this job is paused
                     if(jobQueue.Count() > 0 && runningJobs.Count < MaxConcurrentTasks)
                     {
                         JobContext jb = jobQueue.Dequeue();
@@ -394,30 +443,52 @@ namespace TaskScheduler.Scheduler
                         jb.Start();
                     }
                 }
+                //Prolly should just throw an exception
                 else if(cycleFound == true)
                 {
                     Console.WriteLine("Resource not allowed, deadlock would be caused!");
+
+                    //Or eventually throw exception to make life easier
+                    //Or give the resource to the job that wants it so that multiple processes can share the resource
+                    //Or kill the process
+
+                    //jobContext.RequestStop();
+                    Console.WriteLine("REQUEST STOPPAGE");
+                    HashSet<ResourceClass> resources = resourceMap[jobContext];
+                    foreach(var res in resources)
+                    {
+                        HandleResourceReleased(jobContext, res);
+                    }
+                    jobContext.RequestStop();
                 }
             }
         }
 
+        //To make a graph, I have to consider running jobs and jobs waiting on resources
+        //So if there is a cycle I can correct the mistake up there
         protected DeadlockDetectionGraph MakeDetectionGraph()
         {
             lock (schedulerLock)
             {
-                var graphSize = runningJobs.Count;
+                var graphSize = runningJobs.Count + deadlockJobs.Count;
 
                 DeadlockDetectionGraph deadlockDetectionGraph = new(graphSize);
 
                 //INITIALIZATION
-                for (int i = 0; i < graphSize; i++)
+                int k = 0;
+                for (int i = 0; i < runningJobs.Count; i++)
                 {
                     deadlockDetectionGraph.nodes[i] = runningJobs.ElementAt(i).GetID();
+                    ++k;
+                }
+                for (int i = 0; i < deadlockJobs.Count; i++)
+                {
+                    deadlockDetectionGraph.nodes[k++] = deadlockJobs.ElementAt(i).GetID();
                 }
                 //GET  GRAPH MAPPINGS TO CHECK IF THERE IS A POTENTIAL CYCLE
                 for (int i = 0; i < graphSize; i++)
                 {
-                    if (whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
+                    if (i < runningJobs.Count && whoHoldsResources.ContainsKey(runningJobs.ElementAt(i)))
                     {
                         foreach (var element in whoHoldsResources[runningJobs.ElementAt(i)])
                         {
@@ -428,6 +499,19 @@ namespace TaskScheduler.Scheduler
                                 deadlockDetectionGraph.ms[i, position] = 1;
                             }
                             
+                        }
+                    }
+                    if (i < deadlockJobs.Count &&  whoHoldsResources.ContainsKey(deadlockJobs.ElementAt(i)))
+                    {
+                        foreach (var element in whoHoldsResources[deadlockJobs.ElementAt(i)])
+                        {
+                            int position = deadlockDetectionGraph.FindPositionOfState(element.GetID());
+                            //Console.WriteLine("ENTERED!");
+                            if (position != -1)
+                            {
+                                deadlockDetectionGraph.ms[i, position] = 1;
+                            }
+
                         }
                     }
                 }

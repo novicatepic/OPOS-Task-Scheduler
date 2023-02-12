@@ -39,7 +39,7 @@ namespace GUITs
             InitializeComponent();
             aScheduler = abstractScheduler;
 
-            //Find all job types in project PROJEKAT
+            //Find all job types in project PROJEKAT (where the jobs actually are)
             Type[] types = JobTypes.GetJobTypes();
             
             List<Type> tips = new();
@@ -60,6 +60,8 @@ namespace GUITs
 
         }
 
+        //If user wants to work with the job, I need to parse all the values
+        //Pretty boring
         private void confirmButton_Click(object sender, RoutedEventArgs e)
         {
             int priority, executionTime;
@@ -149,6 +151,7 @@ namespace GUITs
 
         }
 
+        //JSON serializer
         private void JobTypeListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             Type taskType = (Type)JobTypeListBox.SelectedItem;

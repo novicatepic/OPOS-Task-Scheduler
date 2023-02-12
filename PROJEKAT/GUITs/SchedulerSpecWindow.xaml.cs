@@ -27,6 +27,7 @@ namespace GUITs
             InitializeComponent();
         }
 
+        //Read the parameters and get algorithm, pass it to the main window
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             string whichAlgorithm;
@@ -35,7 +36,7 @@ namespace GUITs
             if(rb1.IsChecked== true ) { whichAlgorithm = "FIFO"; }
             else if(rb2.IsChecked == true) { whichAlgorithm = "RR";  }
             else if (rb3.IsChecked == true) { whichAlgorithm = "NoPreemption"; }
-            //else if (rb4.IsChecked == true) { whichAlgorithm = "NoPreemptionSlice"; }
+            else if (rb4.IsChecked == true) { whichAlgorithm = "NoPreemptionSlice"; }
             else if (rb5.IsChecked == true) { whichAlgorithm = "Preemption"; }
             //else if (rb6.IsChecked == true) { whichAlgorithm = "PreemptionSlice"; }
             else { throw new Exception("Algorithm not picked, scheduler can't be started!"); }
@@ -46,6 +47,7 @@ namespace GUITs
 
         }
 
+        //Just set slice times to either true or false if it's Round Robin algorithm or not
         private void rb2_Checked(object sender, RoutedEventArgs e)
         {
             //SliceTimeBlockRR.IsEnabled = true;

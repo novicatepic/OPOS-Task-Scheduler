@@ -9,6 +9,7 @@ namespace TaskScheduler.Scheduler
 {
     public class NonPreemptiveScheduler : AbstractScheduler
     {
+        //This helps me to remember priority that holds resource
         protected Dictionary<ResourceClass, int> rememberPast = new();
 
         internal override void ScheduleJob(JobContext jobContext)
@@ -74,7 +75,6 @@ namespace TaskScheduler.Scheduler
                     if (!resourceMap.ContainsKey(jobContext))
                     {
                         resourceMap.Add(jobContext, new HashSet<ResourceClass>());
-                        HashSet<ResourceClass> gotSet = new();
                         resourceMap[jobContext].Add(resource);
                     }
                     else
@@ -109,6 +109,7 @@ namespace TaskScheduler.Scheduler
                     jobContext.shouldWaitForResource = true;
                     //It's basically not in running jobs anymore
                     runningJobs.Remove(jobContext);
+                    deadlockJobs.Add(jobContext);
                     if (jobQueue.Count() > 0 && runningJobs.Count < MaxConcurrentTasks)
                     {
                         JobContext jb = jobQueue.Dequeue();
@@ -119,6 +120,13 @@ namespace TaskScheduler.Scheduler
                 else if (cycleFound == true)
                 {
                     Console.WriteLine("Resource not allowed, deadlock would be caused!");
+                    Console.WriteLine("REQUEST STOPPAGE");
+                    HashSet<ResourceClass> resources = resourceMap[jobContext];
+                    foreach (var res in resources)
+                    {
+                        HandleResourceReleased(jobContext, res);
+                    }
+                    jobContext.RequestStop();
                 }
             }
         }
@@ -132,6 +140,7 @@ namespace TaskScheduler.Scheduler
                     if (resourceMap[jobContext].Contains(resource))
                     {
                         resourceMap[jobContext].Remove(resource);
+                        //When releasing resource, get back the priority
                         if (jobContext.oldPriority != -1)
                         {
                             int prior = rememberPast[resource];
@@ -147,11 +156,45 @@ namespace TaskScheduler.Scheduler
                                 job.Value.Remove(resource);
                                 if (job.Value.Count == 0 && runningJobs.Count < MaxConcurrentTasks)
                                 {
+                                    if (deadlockJobs.Contains(job.Key))
+                                    {
+                                        deadlockJobs.Remove(job.Key);
+                                    }
+
+                                    if (!resourceMap.ContainsKey(job.Key))
+                                    {
+                                        resourceMap.Add(job.Key, new HashSet<ResourceClass>());
+                                        resourceMap[job.Key].Add(resource);
+                                        Console.WriteLine("ADDED");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("ADDED");
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    if (jobWaitingOnResources.ContainsKey(jobContext))
+                                    {
+                                        jobWaitingOnResources[jobContext].Remove(resource);
+                                    }
+
                                     runningJobs.Add(job.Key);
                                     job.Key.Start();
                                 }
                                 else if (job.Value.Count == 0)
                                 {
+                                    if (!resourceMap.ContainsKey(job.Key))
+                                    {
+                                        resourceMap.Add(job.Key, new HashSet<ResourceClass>());
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    else
+                                    {
+                                        resourceMap[job.Key].Add(resource);
+                                    }
+                                    if (jobWaitingOnResources.ContainsKey(jobContext))
+                                    {
+                                        jobWaitingOnResources[jobContext].Remove(resource);
+                                    }
                                     //jobQueue.Enqueue(job.Key, job.Key.Priority);
                                     //CheckPreemption(job.Key);
                                 }

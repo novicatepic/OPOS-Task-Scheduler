@@ -14,15 +14,15 @@ AbstractScheduler blaaa = new FIFOSchedulerSlicing(2)
 
 AbstractScheduler taskScheduler = new FIFOScheduler()
 {
-    MaxConcurrentTasks = 1
+    MaxConcurrentTasks = 3
 };
 
 
-Job jobA = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
+Job jobA = taskScheduler.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
 {
     Name = "Job A",
     NumIterations = 50,
-    SleepTime = 1000
+    SleepTime = 500
 })
 { Priority = 3 });
 
@@ -32,7 +32,7 @@ Job jobB = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 {
     Name = "Job B",
     NumIterations = 50,
-    SleepTime = 1000
+    SleepTime = 500
 })
 { Priority = 2 });
 
@@ -40,7 +40,7 @@ Job jobC = taskScheduler.AddJobWithoutScheduling(new JobSpecification(new DemoUs
 {
     Name = "Job C",
     NumIterations = 50,
-    SleepTime = 1000
+    SleepTime = 500
 })
 { Priority = 1 });
 
@@ -56,24 +56,31 @@ ResourceClass a = new ResourceClass("R1");
 ResourceClass b = new ResourceClass("R2");
 ResourceClass c = new ResourceClass("R3");
 
-/*Thread.Sleep(600);
+Thread.Sleep(600);
 jobA.RequestResource(a);
 
 Thread.Sleep(600);
-//jobB.RequestResource(a);
-Thread.Sleep(1000);
 taskScheduler.ScheduleUnscheduledJob(jobB);
-Thread.Sleep(1000);
-taskScheduler.ScheduleUnscheduledJob(jobC);
-Thread.Sleep(2000);
-jobC.RequestResource(a);
+Thread.Sleep(600);
+jobB.RequestResource(b);
+Thread.Sleep(600);
+//taskScheduler.ScheduleUnscheduledJob(jobC);
+//Thread.Sleep(400);
+jobA.RequestResource(b);
+Thread.Sleep(600);
+jobB.RequestResource(a);
+Thread.Sleep(600);
+/*jobB.RequestResource(c);
+Thread.Sleep(600);
+jobC.RequestResource(a);*/
 
-Console.WriteLine(jobA.jobContext.State);
-Console.WriteLine(jobB.jobContext.State);
-Console.WriteLine(jobC.jobContext.State);
+Thread.Sleep(3000);
+Console.WriteLine("JA= " + jobA.jobContext.State);
+Console.WriteLine("JB= " + jobB.jobContext.State);
+Console.WriteLine("JC= " + jobC.jobContext.State);
 
 Thread.Sleep(2000);
-Console.WriteLine(jobA.jobContext.Priority);*/
+Console.WriteLine(jobA.jobContext.Priority);
 
 //Thread.Sleep(3000);
 //Console.WriteLine("STATE="+jobA.GetJobContext().State);
@@ -117,13 +124,13 @@ inputPaths.Add(path);
     SingleParallelism = 2
 })
 { Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });*/
-Job demoJob2 = taskScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
+/*Job demoJob2 = taskScheduler.AddJobWithScheduling(new JobSpecification(new NormalizeImageJob(inputPaths, outputPath)
 {
     Name = "Job A",
     Parallelism = 1,
     SingleParallelism = 1
 })
-{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });
+{ Priority = 3, StartTime = new DateTime(2022, 12, 18, 15, 27, 35), FinishTime = new DateTime(2022, 12, 12, 8, 0, 45) });*/
 //Thread.Sleep(2000);
 //demoJob.RequestStop();
 

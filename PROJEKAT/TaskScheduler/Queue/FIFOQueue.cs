@@ -39,6 +39,10 @@ namespace TaskScheduler.Queue
             return queue;
         }
 
+
+        //Help function for round robin because I had problems in GUI
+        //So I had to remove the element, but there is no direct remove function
+        //Manual work
         internal void ReorderQueue(JobContext element)
         {
             bool before = true; bool after = false;

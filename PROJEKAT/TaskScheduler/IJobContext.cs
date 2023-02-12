@@ -33,8 +33,7 @@ namespace TaskScheduler
         public void CheckAll()
         {
             CheckForPause();
-
-            
+       
             CheckForStoppage();
 
             CheckForPriorityStoppage();

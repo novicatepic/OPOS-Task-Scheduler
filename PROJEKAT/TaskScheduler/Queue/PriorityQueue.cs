@@ -28,6 +28,11 @@ namespace TaskScheduler.Queue
             return queue.Count;
         }
 
+        public PriorityQueue<JobContext, int> GetQueue()
+        {
+            return queue;
+        }
+
         /*private readonly Comparison<JobContext> comparison;
 
         

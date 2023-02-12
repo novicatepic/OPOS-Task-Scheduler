@@ -15,6 +15,7 @@ namespace TaskScheduler.Scheduler
             jobQueue = new FIFOQueue();
         }
 
+        //Normal schedule, no problems
         internal override void ScheduleJob(JobContext jobContext)
         {
             lock(schedulerLock)

@@ -106,11 +106,7 @@ namespace PROJEKAT.Jobs
             int numPictures = NumOfPictures();
             for (int i = 0; i < InputPaths.Count; i++)
             {
-                //Console.WriteLine($"{Name}: {i}");
-
-                
-                
-
+                //Console.WriteLine($"{Name}: {i}");                         
                 string[] pictures = Directory.GetFiles(InputPaths[i]);
 
                 Parallel.ForEach(pictures, new ParallelOptions { MaxDegreeOfParallelism = Parallelism }, picture =>

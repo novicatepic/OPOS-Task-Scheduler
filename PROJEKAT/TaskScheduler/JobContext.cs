@@ -37,6 +37,8 @@ namespace TaskScheduler
         public JobState jobState = JobState.NotStarted;
         private readonly Thread thread;
         internal readonly object jobContextLock = new();
+
+        //Handler names self explanatory
         private readonly Action<JobContext> onJobFinished;
         private readonly Action<JobContext> onJobPaused;
         private readonly Action<JobContext> onJobContinueRequested;
@@ -52,7 +54,7 @@ namespace TaskScheduler
         private static readonly SemaphoreSlim waitOnOtherJobSemaphore = new(0);
         private readonly SemaphoreSlim resumeSemaphore = new(0);
         private static int numWaiters = 0;                      //static necessary!
-        private IUserJob userJob;
+        public IUserJob userJob;
         private bool jobStopped = false;
         internal DateTime tempTime;      //in case if user decided to specify MaxExecution time
         internal bool shouldLeave = false;
@@ -233,7 +235,7 @@ namespace TaskScheduler
         }
 
         //Start() is either going to start the job
-        //Or it's going to resume the job if it was paused before
+        //Or it's going to resume the job if it was paused before (pause can be slicing, prirority or normal pause)
         //private DateTime timeContinue = new DateTime(2010, 1, 1);
         private bool firstStart = false;
         private DateTime pauseFinished = new DateTime(2010, 1, 1);
@@ -390,6 +392,8 @@ namespace TaskScheduler
             }
         }
 
+        //This method wasn't tested and is not needed really
+        //Thought it had to be implemented this way
         internal void Wait(JobContext job)
         {
             lock (jobContextLock)
@@ -465,6 +469,7 @@ namespace TaskScheduler
                         break;
                     case JobState.Paused:
                         State = JobState.WaitingToResume;
+                        //Need to have logic for separate process and process that is operated by the scheduler
                         if (!isSeparate)
                             onJobContinueRequested(this);
                         else
@@ -534,6 +539,7 @@ namespace TaskScheduler
                     case JobState.RunningWithPauseRequest:
                         State = JobState.Paused;
                         shouldPause = true;
+                        //Need this time because pause started and I have to reaccess the time later on
                         pauseStarted = DateTime.Now;
                         if (!isSeparate)
                             onJobPaused(this);
@@ -665,9 +671,10 @@ namespace TaskScheduler
                 return;
             }
             Thread helpThread;
+            //Sleep for half a second so we don't hear puf-puf sounds
             helpThread = new(() =>
             {
-                while (StartTime > DateTime.Now) { }
+                while (StartTime > DateTime.Now) { Thread.Sleep(500); }
                 onJobStarted(this);
             });
             helpThread.Start();
@@ -709,7 +716,7 @@ namespace TaskScheduler
         }
 
         internal bool shouldWaitForPriority = false;
-        //If there was call to wait for priority -> thread has to pause
+        //If there was call to wait for priority -> thread has to pause, but there is a separate state to distinguish the cases
         public void CheckForPriorityStoppage()
         {            
             lock (jobContextLock)
@@ -888,7 +895,7 @@ namespace TaskScheduler
             }
         }
 
-        //Call release resource handler
+        //Call release resource handler which will check everything 
         public void ReleaseResource(ResourceClass resource)
         {
             lock (jobContextLock)
@@ -947,7 +954,7 @@ namespace TaskScheduler
             }
         }
 
-        //Method made from gui to help
+        //Method made for gui
         public void ExecuteJobManually()
         {
             lock(jobContextLock)

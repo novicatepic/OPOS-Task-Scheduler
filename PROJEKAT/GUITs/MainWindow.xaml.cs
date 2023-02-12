@@ -1,24 +1,10 @@
 ﻿using PROJEKAT.Jobs;
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using TaskScheduler;
-using TaskScheduler.Queue;
 using TaskScheduler.Scheduler;
 
 namespace GUITs
@@ -35,6 +21,8 @@ namespace GUITs
         {
             InitializeComponent();
             //Application.ApplicationExit += new EventHandler(AppEvents.OnApplicationExit);
+
+            //Whichever algorithm it is, it will be instantiated
             switch (algorithm)
             {
                 case "FIFO":
@@ -44,7 +32,7 @@ namespace GUITs
                     abstractScheduler = new FIFOSchedulerSlicing(sliceTime) { MaxConcurrentTasks = numOfConcurrentTasks };
                     break;
                 case "NoPreemption":
-                    abstractScheduler = new PrioritySchedulerPreemption() { MaxConcurrentTasks = numOfConcurrentTasks };
+                    abstractScheduler = new PrioritySchedulerNoPreemption() { MaxConcurrentTasks = numOfConcurrentTasks };
                     break;
                 case "NoPreemptionSlice":
                     abstractScheduler = new PrioritySchedulerNoPreemptionSlicing() { MaxConcurrentTasks = numOfConcurrentTasks };
@@ -60,8 +48,55 @@ namespace GUITs
             }
 
             RunningJobs.ItemsSource = abstractScheduler.guiJobs;
+
+            //Deserialize from file logic
+            //Basically, read files of serialized Image values and copy values from it, and restart it
+            //Probably not this easy and shouldn't be done like this, but this is my implementation
+            string[] filesToDeserialize = Directory.GetFiles("./SerializeJobs/");
+
+            foreach(string file in filesToDeserialize)
+            {
+                string[] lines = File.ReadAllLines(file);
+                NormalizeImageJob nJob = new NormalizeImageJob()
+                {
+                    Name = lines[0],
+                    OutputPath = lines[1],
+                    SingleParallelism = Int32.Parse(lines[lines.Length - 1]),
+                    Parallelism = Int32.Parse(lines[lines.Length - 2]),
+                    SleepTime = Int32.Parse(lines[lines.Length - 3]),
+                    imageCounter = Int32.Parse(lines[lines.Length - 4])
+                };
+                nJob.InputPaths.Clear();
+                String inputJ = lines[2];
+                String[] splitJobs = inputJ.Split('>');
+                foreach(var splitJob in splitJobs)
+                {
+                    if(!"".Equals(splitJob))
+                    {
+                        nJob.InputPaths.Add(splitJob);
+                    }                   
+                }
+                JobSpecification jobSpec = new JobSpecification();
+                jobSpec.UserJob = nJob;
+                abstractScheduler.AddJobWithScheduling(jobSpec);
+                File.Delete(file);
+            }
+
+            //Didn't find a way to check if user clicked Stop Debugging, don't know if it's even possible
+            /*Thread helpThread;
+            helpThread = new(() =>
+            {
+                while (System.Diagnostics.Debugger.IsAttached)
+                {
+                    MessageBox.Show("Attached");
+                }
+                MessageBox.Show("Deactivated!");
+            });
+            helpThread.Start();*/
+
         }
 
+        //Code not complicated, based on button I chose option that user wanted to select
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             JobCreator jobCreator = new(abstractScheduler);

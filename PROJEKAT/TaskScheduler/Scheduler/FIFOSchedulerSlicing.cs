@@ -19,6 +19,8 @@ namespace TaskScheduler.Scheduler
             this.sliceTime = sliceTime * 1000; //Convert to milliseconds
         }
 
+        //As long as it is possible to start jobs, do it
+        //Else check slice time
         internal override void ScheduleJob(JobContext jobContext)
         {
             lock (schedulerLock)
@@ -76,6 +78,7 @@ namespace TaskScheduler.Scheduler
         }
 
         //HELP FUNCTION FOR GUI
+        //This is a bad function, it's basically check if every job is not paused
         private bool CheckIfEveryJobIsPaused()
         {
             FIFOQueue fIFOQueue = (FIFOQueue )jobQueue;
@@ -112,6 +115,7 @@ namespace TaskScheduler.Scheduler
                 {
                     foreach(JobContext element in fIFOQueue.ReturnQueue())
                     {
+                        //If there is an element not paused, no problems
                         if(element.jobState != JobContext.JobState.Paused)
                         {
                             fIFOQueue.ReorderQueue(element);
@@ -140,15 +144,18 @@ namespace TaskScheduler.Scheduler
 
             lock (schedulerLock)
             {
+                //Not sliced anymore
                 if(jobContext.sliced)
                 {
                     jobContext.sliced = false;
                 }
+                //So either start it 
                 if (runningJobs.Count < MaxConcurrentTasks)
                 {
                     runningJobs.Add(jobContext);
                     jobContext.Start();
                 }
+                //Or make it wait
                 else
                 {
                     jobQueue.Enqueue(jobContext, jobContext.Priority);
@@ -158,7 +165,7 @@ namespace TaskScheduler.Scheduler
 
         internal override void HandleJobFinished(JobContext jobContext)
         {
-
+            //Need to find element that is not slice paused and start it (if it exists)
             lock (schedulerLock)
             {
                 jobContext.SetJobState(JobContext.JobState.Finished);

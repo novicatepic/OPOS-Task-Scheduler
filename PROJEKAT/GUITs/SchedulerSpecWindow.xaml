@@ -29,9 +29,9 @@
                     <TextBox Margin="5, 5, 5, 5" IsEnabled="False" x:Name="SliceTimeBoxRR" Width="50" Text="2" TextAlignment="Center"></TextBox>
                 </StackPanel-->
                 <RadioButton x:Name="rb3" Checked="rb3_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (no preemption)</RadioButton>
-                <!--RadioButton x:Name="rb4" Checked="rb4_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (no preemption + extra slice)</RadioButton-->
+                <RadioButton x:Name="rb4" Checked="rb4_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (no preemption + slicing)</RadioButton>
                 <RadioButton x:Name="rb5" Checked="rb5_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (preemption)</RadioButton>
-                <!--RadioButton x:Name="rb6" Checked="rb6_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (preemption + extra slice)</RadioButton-->
+                <!-- x:Name="rb6" Checked="rb6_Checked" FontSize="20" VerticalContentAlignment="Center" FontFamily="Arial">Priority (preemption + extra slice)</RadioButton-->
 
                 <Separator Margin="0, 15, 0, 0"></Separator>
 

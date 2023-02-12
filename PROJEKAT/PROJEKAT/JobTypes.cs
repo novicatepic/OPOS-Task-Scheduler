@@ -9,6 +9,7 @@ namespace PROJEKAT
 {
     public class JobTypes
     {
+        //Help function for JSON
         public static Type[] GetJobTypes()
         {
             return Assembly.GetExecutingAssembly().GetTypes();
