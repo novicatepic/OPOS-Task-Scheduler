@@ -9,7 +9,7 @@ namespace TaskScheduler.Graph
     //CODE COPIED FROM "FORMALNE METODE"
     public class DeadlockDetectionGraph
     {
-        private int size;
+        public int size;
         public int[,] ms { get; set; }
         public int[] nodes { get; set; }
 

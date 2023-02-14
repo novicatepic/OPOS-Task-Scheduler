@@ -12,10 +12,9 @@ namespace PROJEKAT.Jobs
 {
     public class NormalizeImageJob : IUserJob
     {
-
         public String Name { get; init; } = "Image";
-        public int Parallelism { get; init; } = 2;
-        public int SingleParallelism { get; init; } = 2;
+        public int Parallelism { get; init; } = 1;
+        public int SingleParallelism { get; init; } = 1;
         private const float MIN_BRIGHTNESS = 0;
         private const float MAX_BRIGHTNESS = 1;
         public long time;
@@ -153,14 +152,14 @@ namespace PROJEKAT.Jobs
                             Console.WriteLine($"{Name}: {++imageCounter}");
                             Thread.Sleep(SleepTime);
                             //Check stuff
-                            if (imageCounter == numPictures)
+                            if (imageCounter == numPictures-1)
                             {
                                 jobApi.SetProgress(1);
                             }
                             else
                             {
                                 double progress = (double)imageCounter / (double)numPictures;
-                                jobApi.SetProgress(progress);
+                                jobApi.SetProgress(progress);                           
                             }
                             jobApi.CheckAll();
                             if (jobApi.StoppageConfirmed())
@@ -173,11 +172,17 @@ namespace PROJEKAT.Jobs
                                 breakFromParralel = true;
                             }
 
+                            
 
                         }
                     }
                     deserializeCounter++;
                 });
+
+                if (imageCounter == numPictures)
+                {
+                    jobApi.SetProgress(1);
+                }
 
                 stopwatch.Stop();
                 time = stopwatch.ElapsedMilliseconds;

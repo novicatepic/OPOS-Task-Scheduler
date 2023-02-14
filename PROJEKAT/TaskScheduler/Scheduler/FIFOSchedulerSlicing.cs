@@ -64,7 +64,7 @@ namespace TaskScheduler.Scheduler
                             double ms = ts.TotalMilliseconds;
                             //If a job has been running more than it should have
                             if (ms >= sliceTime && runningJobs.ElementAt(i).sliced == false && !(runningJobs.ElementAt(i).jobState == JobContext.JobState.Stopped)
-                                    && CheckIfEveryJobIsPaused())
+                                    && CheckIfEveryJobIsNotPaused())
                             {
                                 Console.WriteLine("YES!");
                                 runningJobs.ElementAt(i).RequestSliceStoppage();
@@ -79,7 +79,7 @@ namespace TaskScheduler.Scheduler
 
         //HELP FUNCTION FOR GUI
         //This is a bad function, it's basically check if every job is not paused
-        private bool CheckIfEveryJobIsPaused()
+        private bool CheckIfEveryJobIsNotPaused()
         {
             FIFOQueue fIFOQueue = (FIFOQueue )jobQueue;
             lock(schedulerLock)
@@ -111,7 +111,7 @@ namespace TaskScheduler.Scheduler
                 FIFOQueue fIFOQueue = (FIFOQueue)jobQueue;
                 //Console.WriteLine("PRIORaa: " + jobContext.Priority);
                 runningJobs.Remove(jobContext);
-                if (jobQueue.Count() > 0 && CheckIfEveryJobIsPaused())
+                if (jobQueue.Count() > 0 && CheckIfEveryJobIsNotPaused())
                 {
                     foreach(JobContext element in fIFOQueue.ReturnQueue())
                     {

@@ -54,6 +54,16 @@ namespace TaskScheduler.Scheduler
                     dequeuedJobContext.Start();
                     
                 }
+
+                if(resourceMap.ContainsKey(jobContext))
+                {
+                    HashSet<ResourceClass> resources = resourceMap[jobContext];
+                    foreach (var r in resources)
+                    {
+                        HandleResourceReleased(jobContext, r);
+                    }
+                }
+                
             }
         }
 

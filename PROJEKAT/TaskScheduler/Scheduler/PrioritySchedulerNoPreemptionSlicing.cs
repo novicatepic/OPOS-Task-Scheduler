@@ -174,9 +174,6 @@ namespace TaskScheduler.Scheduler
                             break;
                         }
                     }
-                    //JobContext dequeuedJobContext = jobQueue.Dequeue();
-                    //runningJobs.Add(dequeuedJobContext);
-                    //dequeuedJobContext.Start();
                 }
 
             }

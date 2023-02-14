@@ -19,6 +19,8 @@ namespace TaskScheduler
         public void SetJobTime(long time);
         public void CheckSliceStoppage();
 
+        public void RequestResource(ResourceClass r); 
+
         public void CheckForResourse();
 
         public bool CheckConditions()

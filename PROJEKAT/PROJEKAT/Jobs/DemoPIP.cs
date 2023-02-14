@@ -7,18 +7,21 @@ using TaskScheduler;
 
 namespace PROJEKAT.Jobs
 {
-    public class DemoUserJob : IUserJob
+
+    internal class DemoPIP : IUserJob
     {
+
+        static ResourceClass r = new ResourceClass("R1");
+
         //Job has it's name, number of iterations, sleep time...
         //And it implements Run method where we can implement our logic
-        public string Name { get; init; } = "DemoUserJob";
+        public string Name { get; init; } = "PIPJob";
 
         public int NumIterations { get; init; } = 10;
         public int SleepTime { get; init; } = 500;
 
-        public DemoUserJob() { }
-
-        //Important note: checking for pause at the end of each iteration
+        public DemoPIP() { }
+        bool resourceTaken = false;
         public void Run(IJobContext jobApi)
         {
             Console.WriteLine(Name + " started.");
@@ -30,6 +33,13 @@ namespace PROJEKAT.Jobs
                 double progress = (double)i / (double)NumIterations;
                 jobApi.SetProgress(progress);
 
+                if(resourceTaken == false)
+                {
+                    resourceTaken = true;
+                    Console.WriteLine("IN");
+                    jobApi.RequestResource(r);
+                }
+                
                 jobApi.CheckAll();
 
                 if (jobApi.StoppageConfirmed())
@@ -55,5 +65,6 @@ namespace PROJEKAT.Jobs
             }
 
         }
+
     }
 }

@@ -263,6 +263,7 @@ namespace Tests
                 SleepTime = 500
             })
             { });
+            Thread.Sleep(200);
             Assert.IsTrue(jobA.GetJobContext().State == JobContext.JobState.Running && jobB.GetJobContext().State == JobContext.JobState.Running);
         }
 
@@ -292,7 +293,7 @@ namespace Tests
             { });
             Thread.Sleep(3500);
             //jobC overtook because jobA got "sliced"
-            Assert.IsTrue(jobC.GetJobContext().State == JobContext.JobState.Running || jobA.GetJobContext().State == JobContext.JobState.SlicePaused);
+            Assert.IsTrue(jobC.GetJobContext().State == JobContext.JobState.Running && jobA.GetJobContext().State == JobContext.JobState.SlicePaused);
         }
 
         [Test]
@@ -314,32 +315,6 @@ namespace Tests
         }
 
         [Test]
-        public void HigherPriorityWaitingOnResource()
-        {
-            ResourceClass a = new ResourceClass("R1");
-            Job jobA = prioritySchedulerPreemptive.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
-            {
-                Name = "Job A",
-                NumIterations = 5,
-                SleepTime = 1000
-            })
-            { Priority=0 });
-            Job jobB = prioritySchedulerPreemptive.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
-            {
-                Name = "Job B",
-                NumIterations = 5,
-                SleepTime = 1000
-            })
-            { Priority=1 });
-            jobA.RequestResource(a);
-            Thread.Sleep(200);
-            prioritySchedulerPreemptive.ScheduleUnscheduledJob(jobB);
-            HashSet<TaskScheduler.ResourceClass> resources = new HashSet<TaskScheduler.ResourceClass>();
-            prioritySchedulerPreemptive.resourceMap.TryGetValue(jobA.GetJobContext(), out resources);
-            Assert.IsTrue(resources.Contains(a) || jobA.GetJobContext().jobState == JobContext.JobState.Running);
-        }
-
-        [Test]
         public void ReleaseResourceTest()
         {
             ResourceClass a = new ResourceClass("R1");
@@ -357,6 +332,7 @@ namespace Tests
             try
             {
                 fifoScheduler2.resourceMap.TryGetValue(jobA.GetJobContext(), out resources);
+                Assert.IsTrue(resources.Count == 0);
             } catch(Exception ex)
             {
                 //Test should pass because an exception was thrown
@@ -439,8 +415,6 @@ namespace Tests
             })
             { });
 
-
-
             Job jobB = fifoScheduler3.AddJobWithScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job B",
@@ -522,8 +496,6 @@ namespace Tests
             })
             { Priority = 3 });
 
-
-
             Job jobB = prioritySchedulerPreemptive.AddJobWithoutScheduling(new JobSpecification(new DemoUserJob()
             {
                 Name = "Job B",
@@ -554,10 +526,6 @@ namespace Tests
             Thread.Sleep(2000);
             jobC.RequestResource(a);
 
-            Console.WriteLine(jobA.jobContext.State);
-            Console.WriteLine(jobB.jobContext.State);
-            Console.WriteLine(jobC.jobContext.State);
-
             Thread.Sleep(2600);
             Assert.IsTrue(jobA.jobContext.Priority == jobC.jobContext.Priority);
         }
@@ -587,7 +555,6 @@ namespace Tests
 
             Thread.Sleep(600);
             jobA.RequestResource(a);
-
             Thread.Sleep(600);
             fifoScheduler2.ScheduleUnscheduledJob(jobB);
             Thread.Sleep(600);

@@ -264,7 +264,7 @@ namespace TaskScheduler
                         break;  //TESTING PURPOSES
                         //throw new InvalidOperationException("Job already started");
                     case JobState.Finished:
-                        throw new InvalidOperationException("Job already finished");
+                        break;
                     case JobState.WaitingToResume:
                         State = JobState.Running;
                         resumeSemaphore.Release();
@@ -780,7 +780,7 @@ namespace TaskScheduler
         internal bool shouldWaitForResource = false;
         private bool wantsResourse = false;
         //When requesting resource, I have to remember which resource it is, so I can check it later in CheckForResource
-        internal void RequestResource(ResourceClass resource)
+        public void RequestResource(ResourceClass resource)
         {
             lock (jobContextLock)
             {
@@ -804,7 +804,7 @@ namespace TaskScheduler
                     case JobState.Stopped:
                         break;
                     default:
-                        throw new InvalidOperationException("Invalid job state");
+                        break;
                 }
             }
         }

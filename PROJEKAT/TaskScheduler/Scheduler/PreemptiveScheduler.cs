@@ -23,15 +23,17 @@ namespace TaskScheduler.Scheduler
                 bool someoneHoldingResource = false;
                 foreach (var element in resourceMap)
                 {
+                    //Console.WriteLine("wanted after!");
                     if (element.Value != null && element.Value.Contains(resource))
                     {
+                        Console.WriteLine("SOMEONE HOLDING!");
                         someoneHoldingResource = true;
                         //IF ELEMENT HOLDING THE RESOURCE HAS WEAKER PRIORITY
                         if (element.Key.Priority > jobContext.Priority/* && element.Key.oldPriority == -1*/)
                         {
                             if (!rememberPast.ContainsKey(resource))
                             {
-                                //Console.WriteLine("INVERSED PRIORITY!");
+                                Console.WriteLine("INVERSED PRIORITY!");
                                 rememberPast.Add(resource, jobContext.Priority);
                                 element.Key.InversePriority(jobContext.Priority);
                                 CheckPreemption(element.Key);
@@ -68,6 +70,7 @@ namespace TaskScheduler.Scheduler
                 }
                 else
                 {
+                    //Console.WriteLine("GOT RESOURCE!");
                     if (!resourceMap.ContainsKey(jobContext))
                     {
                         resourceMap.Add(jobContext, new HashSet<ResourceClass>());
@@ -91,6 +94,11 @@ namespace TaskScheduler.Scheduler
                 //graph.PrintMatrix();
 
                 bool cycleFound = graph.DFSForCycleCheck(jobContext.GetID());
+
+                /*if(graph.size == 1)
+                {
+                    cycleFound = false;
+                }*/
 
                 //PREVENT EVENTUAL CYCLE PROBLEMS WTIH cycleFound in if-condition
                 if (someoneHoldingResource && cycleFound == false)
@@ -253,6 +261,10 @@ namespace TaskScheduler.Scheduler
                     //jobQueue.Enqueue(jobContext, jobContext.Priority);
                 }
             }
+
+
         }
+
+
     }
 }

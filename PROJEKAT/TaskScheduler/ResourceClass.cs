@@ -10,22 +10,22 @@ namespace TaskScheduler
     {
         //Name has to be unique
         private string name;
-        private int id;
-        private static int uniqueID = 1;
+        //private int id;
+        //private static int uniqueID = 1;
         //private bool locked = false;
 
         public ResourceClass(string name)
         {
             this.name = name;
-            this.name += id;
-            id = uniqueID++;
+            //this.name += id;
+            //id = uniqueID++;
         }
 
         public string GetName()
         {
             return name;
         }
-        public static int GetUniqueID() { return uniqueID; }
+        //public static int GetUniqueID() { return uniqueID; }
 
     }
 }
