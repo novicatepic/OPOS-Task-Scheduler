@@ -31,3 +31,12 @@ Write a user-space file system driver. The file system should utilize the task s
 The file system should contain an "input" folder for copying multimedia files
 After files are copied to the "input" folder, their processing should commence
 Once file processing is complete, the results should be available in the "output" folder
+
+
+![OPOS-1git](https://github.com/novicatepic/OPOS-Task-Scheduler/assets/62095336/c7be3daa-0e5d-456a-943f-8ba7c7e4c259)
+
+![OPOS-2git](https://github.com/novicatepic/OPOS-Task-Scheduler/assets/62095336/bf2ffe62-3443-47c3-8c87-6de00c1da25a)
+
+![OPOS-3git](https://github.com/novicatepic/OPOS-Task-Scheduler/assets/62095336/19e790d5-f101-40a6-897b-8d03b6b53c96)
+
+
